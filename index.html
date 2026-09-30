@@ -321,7 +321,9 @@ textarea.input{resize:vertical; min-height:132px; line-height:1.75;}
 .lock-dialog h3{margin-top:9px; font-size:16.5px; font-weight:700; letter-spacing:-.02em; color:var(--navy-deep);}
 .lock-desc{margin-top:8px; font-size:13px; line-height:1.7; color:var(--ink-2);}
 .lock-desc b{color:var(--teal); font-weight:750;}
-.lock-code{display:flex; gap:8px; margin-top:16px;}
+.lock-tip{margin-top:14px; padding:9px 11px; border:1px solid var(--teal-line); background:var(--teal-soft); border-radius:10px; font-size:12px; line-height:1.65; color:var(--ink-2); text-align:left;}
+.lock-tip b{color:var(--teal-deep); font-weight:750;}
+.lock-code{display:flex; gap:8px; margin-top:10px;}
 .lock-code .input{flex:1; min-width:0; text-align:center; letter-spacing:.06em;}
 .lock-code .btn{flex:none;}
 .lock-acts{display:flex; gap:9px; margin-top:10px; flex-wrap:wrap;}
@@ -1184,9 +1186,10 @@ mark.hl-v{background:#E0F2FE; color:#0284C7;}
     <button class="lock-x" type="button" data-close aria-label="关闭">×</button>
     <p class="lock-emoji" aria-hidden="true">🔒</p>
     <h3 id="lock-title">该分类为【2026 早鸟通卡用户】专属</h3>
-    <p class="lock-desc">输入解锁码或联系客服解锁全站 <b>30+ 篇</b>语料库</p>
+    <p class="lock-desc">输入解锁码立即开通全站 <b>30+ 篇</b>语料库</p>
+    <p class="lock-tip" id="lock-tip">🔒 请输入您的个人专属早鸟解锁码（一机一码，请勿泄露给他人）</p>
     <div class="lock-code">
-      <input id="lock-input" class="input" type="text" placeholder="解锁码，如 TK26-XXXX" autocomplete="off">
+      <input id="lock-input" class="input" type="text" placeholder="解锁码，如 LYN-8F2A" autocomplete="off" spellcheck="false" maxlength="12">
       <button class="btn btn-primary" id="lock-submit" type="button">解锁</button>
     </div>
     <div class="lock-acts">
@@ -1328,8 +1331,9 @@ const WORDS_WITHIN_MAX = w => (parseInt(String(w).split('-')[1], 10) || 0) <= SC
    来源：《TOPIK 高级大作文 考题关键词分析（35 届~106 届 / 68 套真题）》高频主题词总表 1~6 名
    cn = 中文母题名（与标签筛选同源）；ko = 点击后自动填入输入框的韩文关键词；
    topics = 该母题命中的新闻分组（对应 NEWS_POOL 每条的 g 字段）；
-   free = 唯一免费开放的分类（展示前 FREE_PREVIEW 篇精选范文）；locked = 早鸟通卡专属 */
-const FREE_PREVIEW = 3;   /* 免费分类展示的范文条数 */
+   free = 唯一免费开放的分类（展示前 FREE_PREVIEW 篇精选范文）；locked = 早鸟通卡专属
+   注：输入有效卡密解锁后，locked 分类全部开放，FREE_PREVIEW 截断同时失效（全量展示） */
+const FREE_PREVIEW = 3;   /* 未解锁时免费分类展示的范文条数；解锁后不截断 */
 const KEYWORDS = [
   {cn:'科技与AI',       ko:'과학기술·인공지능', topics:['科技与AI'],      free:true},
   {cn:'职场与工作',     ko:'직업·직장·노동',    topics:['职场与工作'],    locked:true},
@@ -1341,6 +1345,64 @@ const KEYWORDS = [
 
 /* 锁定分类的解锁提示（统一口径） */
 const LOCK_TIP = '该分类为【2026 早鸟通卡用户】专属，输入解锁码或联系客服解锁全站 30+ 篇语料库';
+
+/* ===========================================================================
+   一机一码 · 早鸟解锁码（卡密）
+   ---------------------------------------------------------------------------
+   ⚠️ 务必知悉这套机制的边界，别把它当成真正的版权保护：
+     · 卡密写在源码里 —— 任何人「查看网页源代码 / F12」就能看到全部 50 个码；
+     · 解锁状态写在 localStorage —— 打开控制台执行
+         localStorage.setItem('lyntopik_unlocked','true')
+       即可绕过输入框直接解锁；
+     · 因此它只能挡住「顺手转发链接」的普通用户，挡不住懂技术的人。
+     · 真正的「一机一码」（首次激活即绑定设备、同一码拒绝二次激活）必须由后端
+       核销：前端把码 + 设备标识发给服务端，服务端记录绑定关系并返回授权。
+       本站已预留 postApi 通道，接口约定见上方 API_CONFIG 注释块
+       （计划：POST /api/license/activate  { code, deviceId } → { ok, exp }）。
+   =========================================================================== */
+const LS_UNLOCK = 'lyntopik_unlocked';    /* 解锁状态：'true' = 已解锁 */
+const LS_CODE   = 'lyntopik_code';        /* 本机使用的卡密（用于换设备时提示） */
+
+/* 50 个早鸟解锁码（前缀 LYN-，字符集已剔除易混淆的 0/O/1/I） */
+const CARD_KEYS = [
+  'LYN-8F2A', 'LYN-9K3P', 'LYN-3M7X', 'LYN-XTGM', 'LYN-U35K',
+  'LYN-XV34', 'LYN-Z7DQ', 'LYN-6SN6', 'LYN-T4H2', 'LYN-KW8E',
+  'LYN-CKQU', 'LYN-KBD4', 'LYN-T4ZJ', 'LYN-J2NE', 'LYN-PJPD',
+  'LYN-6ARJ', 'LYN-VXKN', 'LYN-Y4MJ', 'LYN-74LC', 'LYN-KTU4',
+  'LYN-4K6P', 'LYN-R24F', 'LYN-47SS', 'LYN-SUAL', 'LYN-P5RR',
+  'LYN-Q39J', 'LYN-6YCR', 'LYN-ET96', 'LYN-9J8U', 'LYN-ZDR5',
+  'LYN-T7Z4', 'LYN-CP57', 'LYN-Q6G2', 'LYN-F4PC', 'LYN-VUPH',
+  'LYN-UVHD', 'LYN-9W3X', 'LYN-VDB9', 'LYN-6Y2Y', 'LYN-RQCT',
+  'LYN-WE6U', 'LYN-UV5Q', 'LYN-SCGB', 'LYN-5Y5U', 'LYN-XCR9',
+  'LYN-AART', 'LYN-KBG9', 'LYN-GPUN', 'LYN-HP2S', 'LYN-V8MD'
+];
+
+/* 读解锁状态（隐私模式 / 禁用存储时降级为未解锁，绝不让页面报错） */
+function isUnlocked(){
+  try { return localStorage.getItem(LS_UNLOCK) === 'true'; } catch(e){ return false; }
+}
+/* 写解锁状态（存储不可用时本次会话仍然放行，只是下次打开会要求重新输入） */
+function markUnlocked(code){
+  try {
+    localStorage.setItem(LS_UNLOCK, 'true');
+    if (code) localStorage.setItem(LS_CODE, code);
+    return true;
+  } catch(e){ return false; }
+}
+/* 卡密归一化：忽略大小写、空格、连字符/下划线；允许只输入后 4 位（自动补 LYN-） */
+function normalizeCode(raw){
+  let c = String(raw || '').toUpperCase().replace(/[\s\-_]/g, '');
+  if (c && c.indexOf('LYN') !== 0 && c.length === 4) c = 'LYN' + c;
+  return c;
+}
+/* 校验卡密：返回 {ok, code?, msg?} */
+function verifyCode(raw){
+  const c = normalizeCode(raw);
+  if (!c) return { ok:false, msg:'请先输入解锁码' };
+  const hit = CARD_KEYS.some(k => normalizeCode(k) === c);
+  if (!hit) return { ok:false, msg:'解锁码无效，请核对后重试（已自动忽略大小写）' };
+  return { ok:true, code:CARD_KEYS.find(k => normalizeCode(k) === c) };
+}
 
 /* ---------------------------------------------------------------------------
    2. Mock 新闻池
@@ -2241,21 +2303,23 @@ const state = {
 function buildKeywords(){
   const host = $('#kw-chips');
   host.innerHTML = '';
+  const unlocked = isUnlocked();          /* 已解锁 → 全部分类开放，不再上锁 */
   KEYWORDS.forEach(k => {
-    const on = !k.locked && (state.keyword === k.ko || state.keyword === k.cn);
-    const b = el('button', 'chip' + (on ? ' is-on' : '') + (k.locked ? ' is-locked' : ''));
+    const isLocked = !!k.locked && !unlocked;   /* 有效锁定态 = 预设锁定 且 未解锁 */
+    const on = !isLocked && (state.keyword === k.ko || state.keyword === k.cn);
+    const b = el('button', 'chip' + (on ? ' is-on' : '') + (isLocked ? ' is-locked' : ''));
     b.type = 'button';
     b.dataset.ko = k.ko;
     b.dataset.cn = k.cn;
-    b.dataset.locked = k.locked ? '1' : '0';
-    b.title = k.locked ? (k.cn + ' · ' + LOCK_TIP) : ('点击填入真题母题关键词：' + k.ko);
+    b.dataset.locked = isLocked ? '1' : '0';
+    b.title = isLocked ? (k.cn + ' · ' + LOCK_TIP) : ('点击填入真题母题关键词：' + k.ko);
     b.innerHTML =
       '<span>' + esc(k.cn) + '</span>' +
       '<span class="chip-ko">' + esc(k.ko) + '</span>' +
       (k.free ? '<span class="chip-free">免费</span>' : '') +
-      (k.locked ? '<span class="chip-ico" aria-hidden="true">🔒</span>' : '');
+      (isLocked ? '<span class="chip-ico" aria-hidden="true">🔒</span>' : '');
     b.addEventListener('click', () => {
-      if (k.locked){ openLockModal(k.cn); return; }   /* 锁定分类：禁止切换，只弹解锁提示 */
+      if (isLocked){ openLockModal(k.cn); return; }   /* 锁定分类：禁止切换，只弹解锁提示 */
       state.keyword = k.ko;
       $('#kw-input').value = k.ko;
       $$('#kw-chips .chip').forEach(x => x.classList.remove('is-on'));
@@ -2268,10 +2332,12 @@ function buildKeywords(){
 
 /* —— 锁定分类弹窗 —— */
 let lockLastFocus = null;
+let lockPendingCn = null;   /* 因点击锁定分类而弹窗时记录该分类，解锁成功后自动切过去 */
 function openLockModal(cn){
   const m = $('#lock-modal');
   if (!m) return;
   lockLastFocus = document.activeElement;
+  lockPendingCn = cn || null;
   const t = $('#lock-title');
   if (t) t.textContent = '该分类为【2026 早鸟通卡用户】专属';
   m.hidden = false;
@@ -2411,7 +2477,7 @@ function mockSearch(){
   list = list.slice().sort((a, b) => ((b._strong || 0) - (a._strong || 0)) || (a.hoursAgo - b.hoursAgo));
 
   return {
-    items: list.slice(0, FREE_PREVIEW),
+    items: isUnlocked() ? list : list.slice(0, FREE_PREVIEW),   /* 已解锁：全量返回，不再截断 */
     total: matched,
     relaxed: relax,
     empty: matched === 0,
@@ -3029,10 +3095,30 @@ function init(){
   if (modal){
     modal.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeLockModal(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLockModal(); });
+    /* 卡密校验：命中 CARD_KEYS → 落 localStorage → 全站即时解锁 */
     const submit = $('#lock-submit');
-    if (submit) submit.addEventListener('click', () => {
-      const v = ($('#lock-input').value || '').trim();
-      toast(!v ? '请先输入解锁码' : '解锁码将由客服核验：请加微信 theearth_01 发送解锁码');
+    const lockInput = $('#lock-input');
+    function tryUnlock(){
+      const r = verifyCode(lockInput ? lockInput.value : '');
+      if (!r.ok){ toast(r.msg); return; }               /* 空值 / 不存在：只提示，不关闭弹窗 */
+      const persisted = markUnlocked(r.code);           /* 存 localStorage，下次同设备自动解锁 */
+      closeLockModal();
+      /* 若本次是因点击某个锁定分类而弹窗，解锁后直接切到该分类 */
+      const pend = KEYWORDS.find(k => k.cn === lockPendingCn);
+      if (pend){
+        state.keyword = pend.ko;
+        if ($('#kw-input')) $('#kw-input').value = pend.ko;
+      }
+      lockPendingCn = null;
+      buildKeywords();        /* 重渲染分类：所有 🔒 与灰置一并摘除 */
+      refreshNews();          /* 结果区按解锁后的口径重跑（不再截断） */
+      toast(persisted
+        ? '🎉 解锁成功，全站 30+ 篇语料库已对这台设备开放'
+        : '🎉 解锁成功（浏览器存储不可用，仅本次窗口有效）');
+    }
+    if (submit) submit.addEventListener('click', tryUnlock);
+    if (lockInput) lockInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter'){ e.preventDefault(); tryUnlock(); }   /* 回车直接提交 */
     });
     const lwx = $('#lock-wx');
     if (lwx) lwx.addEventListener('click', async () => {
