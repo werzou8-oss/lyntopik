@@ -323,6 +323,9 @@ textarea.input{resize:vertical; min-height:132px; line-height:1.75;}
 .lock-desc b{color:var(--teal); font-weight:750;}
 .lock-tip{margin-top:14px; padding:9px 11px; border:1px solid var(--teal-line); background:var(--teal-soft); border-radius:10px; font-size:12px; line-height:1.65; color:var(--ink-2); text-align:left;}
 .lock-tip b{color:var(--teal-deep); font-weight:750;}
+.lock-warn{margin-top:10px; padding:10px 12px; border:1px solid #FCA5A5; background:#FEF2F2; border-radius:10px; font-size:12.5px; line-height:1.65; color:#B91C1C; font-weight:700; text-align:left;}
+.lock-warn[hidden]{display:none;}
+.lock-warn span{display:block; margin-top:5px; font-size:11.5px; font-weight:400; color:#991B1B;}
 .lock-code{display:flex; gap:8px; margin-top:10px;}
 .lock-code .input{flex:1; min-width:0; text-align:center; letter-spacing:.06em;}
 .lock-code .btn{flex:none;}
@@ -1188,6 +1191,7 @@ mark.hl-v{background:#E0F2FE; color:#0284C7;}
     <h3 id="lock-title">该分类为【2026 早鸟通卡用户】专属</h3>
     <p class="lock-desc">输入解锁码立即开通全站 <b>30+ 篇</b>语料库</p>
     <p class="lock-tip" id="lock-tip">🔒 请输入您的个人专属早鸟解锁码（一机一码，请勿泄露给他人）</p>
+    <div class="lock-warn" id="lock-warn" role="alert" hidden></div>
     <div class="lock-code">
       <input id="lock-input" class="input" type="text" placeholder="解锁码，如 LYN-8F2A" autocomplete="off" spellcheck="false" maxlength="12">
       <button class="btn btn-primary" id="lock-submit" type="button">解锁</button>
@@ -1395,13 +1399,133 @@ function normalizeCode(raw){
   if (c && c.indexOf('LYN') !== 0 && c.length === 4) c = 'LYN' + c;
   return c;
 }
-/* 校验卡密：返回 {ok, code?, msg?} */
+/* 校验卡密（本地模式专用：仅在未配置 Supabase 时兜底，见下方 CLOUD_ON） */
 function verifyCode(raw){
   const c = normalizeCode(raw);
   if (!c) return { ok:false, msg:'请先输入解锁码' };
   const hit = CARD_KEYS.some(k => normalizeCode(k) === c);
   if (!hit) return { ok:false, msg:'解锁码无效，请核对后重试（已自动忽略大小写）' };
   return { ok:true, code:CARD_KEYS.find(k => normalizeCode(k) === c) };
+}
+
+/* ===========================================================================
+   云端一机一码（Supabase）
+   ---------------------------------------------------------------------------
+   配置三步（详见项目根目录 SUPABASE-部署指南.md）：
+     ① Supabase 建项目 → SQL Editor 里整段运行 supabase/schema.sql
+     ② 项目 Settings → API → 复制 Project URL 与 anon public key
+     ③ 填到下面两行 → 保存 → 重新部署
+   留空 = 自动退回「本地卡密」模式：页面照常能用，但无法阻止一个码在多台设备共享。
+
+   ⚠️ anonKey 放在前端是官方设计（它本身几乎无权限），真正的防线是数据库侧的
+      RLS + SECURITY DEFINER 函数：anon 角色读不到 keys 表，只能调用
+      activate_key 这一个动作。详见 schema.sql 里的说明。
+   =========================================================================== */
+const SUPABASE_CFG = {
+  url: '',                 // ← 例：https://abcdefghijklmn.supabase.co
+  anonKey: '',             // ← 例：eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIs...
+  rpc: 'activate_key',     // ← 保持与 schema.sql 中的函数名一致
+
+  /* useSdk=true  → 引入官方 SDK（CDN 懒加载）再调 rpc
+     useSdk=false → 直接 POST 到 /rest/v1/rpc/activate_key（等价，默认）
+     为什么默认关掉 SDK：我们只调一个 rpc，SDK 在这里不提供额外能力，
+     却带来两个真实代价 —— ①首次点击要从 jsDelivr 下载约 100KB，
+     国内网络下常常要等好几秒甚至超时（用户在「验证中…」里干等）；
+     ②多一个 CDN 单点故障，jsDelivr 不可达时整站解锁功能一起挂。
+     直接 REST 没有这些负担，且保住了本页「零外部资源」的单文件特性。
+     想用官方 SDK 的话把这里改成 true 即可，两条路打的是同一个接口。 */
+  useSdk: false
+};
+/* 判定「云端模式」：两个字段都填了就算开启。
+   刻意不做「URL 必须长得像 supabase.co」的严格校验 —— 否则一旦把地址写错，
+   页面会静默退回本地模式，你会以为一机一码在生效、实际没有，这是最危险的失败方式。
+   宁可开启后连接失败并明确报错，也不静默降级。地址形状不对时控制台会给出提醒。 */
+const CLOUD_ON = ((SUPABASE_CFG.url || '').trim() !== '') &&
+  ((SUPABASE_CFG.anonKey || '').trim().length > 40);
+if (CLOUD_ON && !/^https?:\/\/[a-z0-9.-]+(:\d+)?\/?$/i.test(SUPABASE_CFG.url.trim())){
+  console.warn('[卡密] SUPABASE_CFG.url 不是合法的 http(s) 地址，请核对：', SUPABASE_CFG.url);
+} else if (CLOUD_ON && !/\.supabase\.(co|in)\/?$/i.test(SUPABASE_CFG.url.trim())){
+  console.warn('[卡密] SUPABASE_CFG.url 不像 Supabase 项目地址（应为 https://xxx.supabase.co），请核对：', SUPABASE_CFG.url);
+} else if (!CLOUD_ON && (SUPABASE_CFG.url || '').trim() !== ''){
+  console.warn('[卡密] 只填了 url 没填 anonKey（或 key 太短），当前仍在本地卡密模式，一机一码未生效');
+}
+
+const LS_DEVICE = 'lyntopik_device_id';   /* 本机设备标识 */
+const WARN_SHARED = '🔒 该卡密已在其他设备激活，一机一码禁止共享！';
+
+/* 设备标识
+   为什么用「随机 UUID 存 localStorage」而不是真正的浏览器指纹？
+   因为指纹会随浏览器升级 / 隐私设置 / 硬件更换而漂移，一旦漂移，
+   老用户手里的卡密就会被判成「换设备」，等于把付过费的人挡在门外 ——
+   这类客诉的成本远高于防住那点共享。UUID 的代价是「清缓存 = 换设备」，
+   所以 schema.sql 里配了客服解绑 SQL 作为兜底出口。 */
+function getDeviceId(){
+  try {
+    let id = localStorage.getItem(LS_DEVICE);
+    if (id) return id;
+    id = (window.crypto && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : 'dev-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+    localStorage.setItem(LS_DEVICE, id);
+    return id;
+  } catch (e){
+    /* 隐私模式下 localStorage 不可用：退回会话内存态，本次仍可验证 */
+    if (!getDeviceId._mem) getDeviceId._mem = 'mem-' + Math.random().toString(36).slice(2, 12);
+    return getDeviceId._mem;
+  }
+}
+
+/* —— Supabase JS SDK（CDN 懒加载）——
+   按需求引入官方 SDK；若 CDN 不可达（国内直连 jsDelivr 常失败），
+   自动退回等价的 REST 调用 —— 两条路打的是同一个 rpc 接口，行为一致。 */
+let sbClient = null, sbLoading = null;
+function loadSupabaseSDK(){
+  if (window.supabase && window.supabase.createClient) return Promise.resolve(window.supabase);
+  if (sbLoading) return sbLoading;
+  sbLoading = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
+    s.async = true;
+    s.onload = () => (window.supabase && window.supabase.createClient)
+      ? resolve(window.supabase) : reject(new Error('SDK_LOAD_FAILED'));
+    s.onerror = () => reject(new Error('SDK_LOAD_FAILED'));
+    document.head.appendChild(s);
+  });
+  return sbLoading;
+}
+/* rpc 返回值归一化：PostgREST 可能回对象、字符串或单元素数组 */
+function normalizeRpcResult(data){
+  if (!data) return { status:'invalid' };
+  if (typeof data === 'string'){ try { return JSON.parse(data); } catch (e){ return { status:'invalid' }; } }
+  if (Array.isArray(data)) return data[0] || { status:'invalid' };
+  return data;
+}
+/* 调云端校验：返回 {status:'invalid'|'activated'|'ok'|'other_device', code?} */
+async function rpcActivate(code, deviceId){
+  const args = { p_code: code, p_device: deviceId };
+
+  /* 路线 A（可选）：官方 SDK */
+  if (SUPABASE_CFG.useSdk){
+    const sb = await loadSupabaseSDK();
+    if (!sbClient) sbClient = sb.createClient(SUPABASE_CFG.url.trim(), SUPABASE_CFG.anonKey.trim());
+    const { data, error } = await sbClient.rpc(SUPABASE_CFG.rpc, args);
+    if (error) throw new Error(error.message || 'RPC_ERROR');
+    return normalizeRpcResult(data);
+  }
+
+  /* 路线 B（默认）：直接打 PostgREST，等价于 SDK 内部所做的事 */
+  const key = SUPABASE_CFG.anonKey.trim();
+  const res = await fetch(SUPABASE_CFG.url.trim().replace(/\/$/, '') + '/rest/v1/rpc/' + SUPABASE_CFG.rpc, {
+    method: 'POST',
+    headers: {
+      'apikey': key,
+      'Authorization': 'Bearer ' + key,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(args)
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return normalizeRpcResult(await res.json());
 }
 
 /* ---------------------------------------------------------------------------
@@ -2342,6 +2466,8 @@ function openLockModal(cn){
   if (t) t.textContent = '该分类为【2026 早鸟通卡用户】专属';
   m.hidden = false;
   document.body.style.overflow = 'hidden';
+  const w = $('#lock-warn');                       /* 每次打开都清掉上一次的共享警告 */
+  if (w){ w.hidden = true; w.textContent = ''; }
   const inp = $('#lock-input');
   if (inp){ inp.value = ''; setTimeout(() => inp.focus(), 60); }
 }
@@ -3095,31 +3221,85 @@ function init(){
   if (modal){
     modal.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeLockModal(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLockModal(); });
-    /* 卡密校验：命中 CARD_KEYS → 落 localStorage → 全站即时解锁 */
+    /* 卡密校验：本地模式命中 CARD_KEYS / 云端模式走 Supabase 一机一码 */
     const submit = $('#lock-submit');
     const lockInput = $('#lock-input');
-    function tryUnlock(){
-      const r = verifyCode(lockInput ? lockInput.value : '');
-      if (!r.ok){ toast(r.msg); return; }               /* 空值 / 不存在：只提示，不关闭弹窗 */
-      const persisted = markUnlocked(r.code);           /* 存 localStorage，下次同设备自动解锁 */
+    const warnBox = $('#lock-warn');
+
+    function hideWarn(){ if (warnBox){ warnBox.hidden = true; warnBox.textContent = ''; } }
+    function showWarn(main, sub){
+      if (!warnBox) return;
+      warnBox.innerHTML = esc(main) + (sub ? '<span>' + esc(sub) + '</span>' : '');
+      warnBox.hidden = false;
+    }
+    function setBusy(on){
+      if (submit){ submit.disabled = !!on; submit.textContent = on ? '验证中…' : '解锁'; }
+      if (lockInput) lockInput.disabled = !!on;
+    }
+
+    /* 校验通过后的统一收尾：落状态 → 摘锁 → 跳到被挡分类 */
+    function finishUnlock(code, msg){
+      markUnlocked(code);
       closeLockModal();
-      /* 若本次是因点击某个锁定分类而弹窗，解锁后直接切到该分类 */
       const pend = KEYWORDS.find(k => k.cn === lockPendingCn);
       if (pend){
         state.keyword = pend.ko;
         if ($('#kw-input')) $('#kw-input').value = pend.ko;
       }
       lockPendingCn = null;
-      buildKeywords();        /* 重渲染分类：所有 🔒 与灰置一并摘除 */
-      refreshNews();          /* 结果区按解锁后的口径重跑（不再截断） */
-      toast(persisted
-        ? '🎉 解锁成功，全站 30+ 篇语料库已对这台设备开放'
-        : '🎉 解锁成功（浏览器存储不可用，仅本次窗口有效）');
+      buildKeywords();
+      refreshNews();
+      toast(msg);
     }
+
+    async function tryUnlock(){
+      const raw = lockInput ? lockInput.value : '';
+      if (!normalizeCode(raw)){ toast('请先输入解锁码'); return; }
+      hideWarn();
+
+      /* —— 模式一：未配置 Supabase，退回本地卡密 —— */
+      if (!CLOUD_ON){
+        const r = verifyCode(raw);
+        if (!r.ok){ toast(r.msg); return; }
+        finishUnlock(r.code, '🎉 解锁成功，全站 30+ 篇语料库已开放');
+        return;
+      }
+
+      /* —— 模式二：云端一机一码 —— */
+      setBusy(true);
+      try {
+        const deviceId = getDeviceId();
+        const res = await rpcActivate(normalizeCode(raw), deviceId);
+        const st = (res && res.status) || 'invalid';
+
+        if (st === 'invalid'){                    /* ① 卡密不存在 */
+          toast('卡密无效');
+          return;
+        }
+        if (st === 'activated'){                  /* ② 首次激活 → 绑定本机 */
+          finishUnlock(res.code || normalizeCode(raw), '🎉 激活成功，已绑定本机，全站语料库已开放');
+          return;
+        }
+        if (st === 'ok'){                         /* ③ 已绑定且就是本机 → 放行 */
+          finishUnlock(res.code || normalizeCode(raw), '🎉 欢迎回来，已为你解锁');
+          return;
+        }
+        /* ④ 已绑定到别的设备 → 弹窗警告，不解锁 */
+        showWarn(WARN_SHARED, '本卡密已绑定到另一台设备。如你更换了手机或清理过浏览器数据，请联系客服解绑后重试。');
+      } catch (e){
+        toast('网络异常，暂时无法校验，请稍后重试或联系客服');
+      } finally {
+        setBusy(false);
+      }
+    }
+
     if (submit) submit.addEventListener('click', tryUnlock);
-    if (lockInput) lockInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter'){ e.preventDefault(); tryUnlock(); }   /* 回车直接提交 */
-    });
+    if (lockInput){
+      lockInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter'){ e.preventDefault(); tryUnlock(); }   /* 回车直接提交 */
+      });
+      lockInput.addEventListener('input', hideWarn);                 /* 重新输入即撤下警告 */
+    }
     const lwx = $('#lock-wx');
     if (lwx) lwx.addEventListener('click', async () => {
       const ok = await copyText('theearth_01');
