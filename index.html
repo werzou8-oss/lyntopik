@@ -381,6 +381,10 @@ textarea.input{resize:vertical; min-height:132px; line-height:1.75;}
   padding:26px; text-align:center; font-size:13.5px; color:var(--ink-3);
   border:1px dashed var(--line); border-radius:13px; background:#FCFCFD;
 }
+/* 未解锁空状态的转化引导：文案 + 解锁按钮成组居中 */
+.empty .empty-tip{margin:0;}
+.empty .empty-cta{margin-top:14px;}
+@media (max-width:520px){ .empty{padding:22px 16px;} }
 
 /* 拆解进度 */
 .steps{display:grid; gap:9px; margin-top:20px;}
@@ -2544,9 +2548,20 @@ function renderNews(list){
   if (!list.length){
     /* 未解锁时的「空」多数不是真的没有，而是命中的内容在锁定分类里 ——
        直接说「试试换个关键词」会让人以为站内没这个内容，是个误导。 */
-    host.appendChild(el('div', 'empty', isUnlocked()
-      ? '没有匹配的新闻，试试换个关键词。'
-      : '免费试看区没有匹配内容 —— 该关键词可能属于锁定分类，输入解锁码后可检索全部语料库。'));
+    const box = el('div', 'empty');
+    if (isUnlocked()){
+      box.textContent = '没有匹配的新闻，试试换个关键词。';
+    } else {
+      /* 未解锁空状态：这是「搜索意图最明确、却被锁住」的一刻，转化价值最高 ——
+         文案下方给一个直达解锁弹窗的按钮，别让用户自己翻到页面底部找入口。 */
+      box.appendChild(el('p', 'empty-tip',
+        '免费试看区没有匹配内容 —— 该关键词可能属于锁定分类，输入解锁码后可检索全部语料库。'));
+      const cta = el('button', 'btn btn-primary btn-sm empty-cta', '🔓 解锁全库获取更多内容');
+      cta.type = 'button';
+      cta.addEventListener('click', () => openLockModal());
+      box.appendChild(cta);
+    }
+    host.appendChild(box);
     return;
   }
   list.forEach(n => {
