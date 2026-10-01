@@ -333,6 +333,37 @@ textarea.input{resize:vertical; min-height:132px; line-height:1.75;}
 .lock-acts .btn{flex:1 1 190px; justify-content:center; font-size:13px;}
 .lock-foot{margin-top:12px; font-size:11.5px; line-height:1.6; color:var(--ink-3);}
 
+/* —— 校验失败 · 大号警告弹窗 ——
+   为什么单独做一层而不是在输入框下方挂小字：卡密校验失败是「必须被看见」的信息。
+   12px 的小字容易被当成说明文字划过去，用户只会觉得「输了没用」，然后流失。
+   这里刻意压在锁定弹窗之上（z-index 320 > 300），并保留锁定弹窗在背后 ——
+   因为「重新输入」要回到那个输入框，弹窗关掉就没法给它聚焦了。 */
+.err-modal{z-index:320;}
+.err-modal .lock-backdrop{background:rgba(15,23,42,.34);}   /* 叠加后仍是轻遮罩，不压死背景 */
+.err-dialog{
+  width:min(460px, 100%); padding:26px 24px 22px;
+  border:1.5px solid #FCA5A5;
+  box-shadow:0 32px 74px -22px rgba(153,27,27,.5);
+}
+.err-dialog .err-title{
+  margin-top:10px; font-size:22px; font-weight:800; letter-spacing:-.02em;
+  line-height:1.34; color:#DC2626;
+}
+.err-dialog .err-desc{
+  margin-top:13px; font-size:18px; line-height:1.72; font-weight:600;
+  color:#7F1D1D; text-align:left;
+}
+.err-dialog .err-desc b{color:#DC2626; font-weight:800;}
+.err-acts{display:flex; gap:10px; margin-top:20px;}
+.err-acts .btn{flex:1 1 0; min-width:0; justify-content:center; font-size:16px; font-weight:700; padding:12px 14px;}
+@media (max-width:460px){
+  .err-modal .lock-backdrop{background:rgba(15,23,42,.48);}
+  .err-dialog{padding:22px 18px 18px;}
+  .err-dialog .err-title{font-size:20px;}
+  .err-dialog .err-desc{font-size:16.5px;}
+  .err-acts{flex-direction:column-reverse;}   /* 主操作「重新输入」压在下方，拇指够得到 */
+}
+
 .workbar{
   display:flex; align-items:center; gap:10px; flex-wrap:wrap;
   margin-top:14px; padding-top:14px; border-top:1px solid var(--line-2);
@@ -1205,6 +1236,20 @@ mark.hl-v{background:#E0F2FE; color:#0284C7;}
       <a class="btn btn-ghost" href="#unlock" data-close>查看早鸟通卡</a>
     </div>
     <p class="lock-foot">已在页面底部扫码支付？把解锁码发给客服，即可秒开通全部 6 大分类。</p>
+  </div>
+</div>
+
+<!-- 校验失败 · 大号警告弹窗（压在锁定弹窗之上；文案由 openErrModal(kind) 决定） -->
+<div class="lock-modal err-modal" id="err-modal" role="alertdialog" aria-modal="true" aria-labelledby="err-title" aria-describedby="err-desc" hidden>
+  <div class="lock-backdrop" data-err-close></div>
+  <div class="lock-dialog err-dialog">
+    <button class="lock-x" type="button" data-err-close aria-label="关闭">×</button>
+    <h3 class="err-title" id="err-title">⚠️ 卡密无效或不存在</h3>
+    <p class="err-desc" id="err-desc">您输入的解锁码无效或已被作废，请检查是否拼写错误。如需获取最新首发卡密，请联系客服。</p>
+    <div class="err-acts">
+      <button class="btn btn-primary" id="err-retry" type="button">重新输入</button>
+      <button class="btn btn-ghost" id="err-wx" type="button">复制客服微信</button>
+    </div>
   </div>
 </div>
 
@@ -2399,6 +2444,55 @@ function closeLockModal(){
   if (lockLastFocus && lockLastFocus.focus) lockLastFocus.focus();
 }
 
+/* —— 校验失败 · 大号警告弹窗 ——
+   设计意图：卡密错了是必须立刻被看见的事，不能塞进输入框下面的 12px 小字里。
+   ⚠️ 关键约束：绝不能把所有失败都写成「卡密无效」——
+   网络断了 / 云端语料没部署好，都不是用户的错，硬说成「你的卡密无效」会让
+   已经付过钱的买家以为自己被骗了。所以按失败原因分种类，文案如实分家。 */
+const ERR_KINDS = {
+  invalid: {
+    title: '⚠️ 卡密无效或不存在',
+    desc:  '您输入的解锁码无效或已被作废，请检查是否拼写错误。如需获取最新首发卡密，请联系客服。'
+  },
+  network: {
+    title: '⚠️ 暂时无法校验',
+    desc:  '网络或服务器暂时不可用，<b>这不代表您的解锁码有问题</b>。请稍后重试；若持续失败，请联系客服协助处理。'
+  },
+  noservice: {
+    title: '⚠️ 云端语料尚未就绪',
+    desc:  '您的解锁码已通过校验，但云端语料还没部署完成。请联系客服，我们会尽快为您开通。'
+  },
+  noenv: {
+    title: '⚠️ 当前环境无法校验',
+    desc:  '本页需要用线上网址打开才能校验解锁码（直接双击本地文件打开时不支持）。请改用线上地址访问，或联系客服协助。'
+  }
+};
+let errLastFocus = null;
+function openErrModal(kind){
+  const m = $('#err-modal');
+  if (!m) return;
+  const c = ERR_KINDS[kind] || ERR_KINDS.invalid;
+  const t = $('#err-title'), d = $('#err-desc');
+  if (t) t.textContent = c.title;
+  if (d) d.innerHTML = c.desc;          /* desc 里允许 <b>，内容全部是本文件里的常量，不含用户输入 */
+  errLastFocus = document.activeElement;
+  m.hidden = false;
+  /* 弹窗里不再放输入框，焦点给主操作，键盘用户回车即可「重新输入」 */
+  const r = $('#err-retry');
+  if (r) setTimeout(() => r.focus(), 60);
+}
+function closeErrModal(){
+  const m = $('#err-modal');
+  if (!m || m.hidden) return;
+  m.hidden = true;
+  if (errLastFocus && errLastFocus.focus && document.contains(errLastFocus)) errLastFocus.focus();
+  errLastFocus = null;
+}
+function isErrModalOpen(){
+  const m = $('#err-modal');
+  return !!m && !m.hidden;
+}
+
 /* ---------------------------------------------------------------------------
    7. 新闻抓取
    ---------------------------------------------------------------------------
@@ -3163,7 +3257,12 @@ function init(){
   const modal = $('#lock-modal');
   if (modal){
     modal.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeLockModal(); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLockModal(); });
+    /* Esc 先关最上面那层：警告弹窗开着的时候，按 Esc 应该关它而不是连底下的解锁弹窗一起关掉 */
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      if (isErrModalOpen()) closeErrModal();
+      else closeLockModal();
+    });
     /* 卡密校验：本地模式用卡密派生密钥解密文 / 云端模式走 Supabase 一机一码并取语料
        —— 两条路的终点都是 fetchLocked()，上层只认「解出来的 payload」 */
     const submit = $('#lock-submit');
@@ -3218,15 +3317,15 @@ function init(){
           return;
         }
         if (r.status === 'empty'){ toast('请先输入解锁码'); return; }
-        if (r.status === 'error'){ toast(r.msg || '云端暂时取不到语料，请稍后重试'); return; }
-        if (r.status === 'no_corpus' || r.status === 'unused'){ toast('云端语料尚未就绪，请联系客服'); return; }
-        /* invalid（以及任何未列举的状态）：云端按需求口径说「卡密无效」，
-           本地模式则提示归一化容错，减少「明明没输错」的困惑 */
-        toast(CLOUD_ON ? '卡密无效' : '解锁码无效，请核对后重试（已自动忽略大小写）');
+        /* 以下三类都不再走输入框下方的小字/toast，一律升格为大号警告弹窗。
+           但标题与正文按「到底是谁的问题」分家 —— 把网络故障说成「你的卡密无效」，
+           会让真付过钱的买家以为自己被骗。 */
+        if (r.status === 'error'){ openErrModal('network'); return; }
+        if (r.status === 'no_corpus' || r.status === 'unused'){ openErrModal('noservice'); return; }
+        /* invalid（以及任何未列举的状态）：就是「卡密无效或不存在」这一种 */
+        openErrModal('invalid');
       } catch (e){
-        toast(CLOUD_ON
-          ? '网络异常，暂时无法校验，请稍后重试或联系客服'
-          : '当前环境不支持本地解密（请用 https 或 localhost 打开），需要帮助请联系客服');
+        openErrModal(CLOUD_ON ? 'network' : 'noenv');
       } finally {
         setBusy(false);
       }
@@ -3241,6 +3340,23 @@ function init(){
     }
     const lwx = $('#lock-wx');
     if (lwx) lwx.addEventListener('click', async () => {
+      const ok = await copyText('theearth_01');
+      toast(ok ? '客服微信号已复制：theearth_01' : '复制失败，请手动添加 theearth_01');
+    });
+  }
+
+  /* 校验失败大号警告弹窗：关闭（背板 / × / Esc）+ [重新输入] + [复制客服微信] */
+  const errModal = $('#err-modal');
+  if (errModal){
+    errModal.addEventListener('click', e => { if (e.target.closest('[data-err-close]')) closeErrModal(); });
+    const retry = $('#err-retry');
+    if (retry) retry.addEventListener('click', () => {
+      closeErrModal();                       /* 底下的解锁弹窗保持打开，正好接着改 */
+      const inp = $('#lock-input');
+      if (inp){ inp.value = ''; setTimeout(() => inp.focus(), 40); }   /* 清空 + 自动聚焦 */
+    });
+    const ewx = $('#err-wx');
+    if (ewx) ewx.addEventListener('click', async () => {
       const ok = await copyText('theearth_01');
       toast(ok ? '客服微信号已复制：theearth_01' : '复制失败，请手动添加 theearth_01');
     });
