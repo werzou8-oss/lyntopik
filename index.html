@@ -5,8 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="TOPIK 54题大作文 · 韩语新闻精读与正反语料库：从韩文热点新闻到高分作文句式，一键完成精读、提炼与论据套用。">
 <!-- 构建标识：单文件站点没有外部 JS/CSS 可加 ?v=，靠这个标记辨别浏览器拿到的是哪一版。
-     查看方法：DevTools 控制台输入 __BUILD__ ，或右键「查看网页源代码」搜 lyntopik-build。 -->
-<meta name="lyntopik-build" content="20261002-2358">
+     查看方法：DevTools 控制台输入 __BUILD__ ，或右键「查看网页源代码」搜 lyntopik-build。
+     ⚠️ 每次改代码必须同步更新此处的号 + 下面 window.__BUILD__，否则无法分辨新旧。 -->
+<meta name="lyntopik-build" content="20261003-0010">
+<!-- 防强缓存声明（对 file:// 及部分老浏览器有效；HTTP 环境真正生效的是页脚的自愈脚本） -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>TOPIK大作文 · 新闻拆解迁移运用语料库</title>
 <link rel="icon" href="data:,">
 <style>
@@ -1334,8 +1339,33 @@ mark.hl-v{background:#E0F2FE; color:#0284C7;}
 /* 构建标识（与 <meta name="lyntopik-build"> 保持一致）。
    单文件站点没有外部资源可加 ?v=，部署后靠它辨别浏览器实际加载的是哪一版：
    控制台输入 __BUILD__ 即可看到；对不上就是缓存/走错 URL。 */
-window.__BUILD__ = '20261002-2358';
+window.__BUILD__ = '20261003-0010';
 console.log('[LYNTOPIK] build ' + window.__BUILD__);
+
+/* —— HTML 强缓存自愈 ——
+   GitHub Pages 对 HTML 下发 Cache-Control: max-age=600，普通刷新（F5）可能仍吃旧文件；
+   而 <meta http-equiv> 在现代浏览器里对 HTTP 缓存基本无效，所以真正的兜底放在这里：
+   页面加载后，用一个「唯一查询串 + no-store」的请求回源取一次最新 HTML
+   （查询串每次不同 → CDN 边缘没有对应缓存 → 必然回源），比对构建标识：
+   只有线上确实更新（版本号更大）时，才带 ?v=<线上号> 重新加载一次。
+   —— 绝不下钻降级（线上更旧不回滚）、每会话最多自愈一次（防死循环）、任何异常一律静默。 */
+(function(){
+  try{
+    if (location.protocol === 'file:') return;                /* 本地文件不适用 */
+    var KEY = 'lyntopik_cacheheal';
+    if (sessionStorage.getItem(KEY)) return;                  /* 本会话已自愈过，不再重复 */
+    fetch(location.pathname + '?__probe=' + Date.now(), { cache: 'no-store' })
+      .then(function(r){ return r.ok ? r.text() : ''; })
+      .then(function(html){
+        var m = /lyntopik-build"\s+content="([^"]+)"/.exec(html);
+        if (m && m[1] > window.__BUILD__){                    /* 仅当线上更新才刷新 */
+          sessionStorage.setItem(KEY, '1');
+          location.replace(location.pathname + '?v=' + encodeURIComponent(m[1]));
+        }
+      })
+      .catch(function(){});
+  }catch(e){}
+})();
 
 /* ---------------------------------------------------------------------------
    0. 后端接口预留层
@@ -3254,31 +3284,43 @@ function renderResult(card, news){
   box.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
-/* —— 新闻「选中」的两条入口共用同一个动作 ——
-   「一键导入」按钮 与 「点击新闻标题」 都先走 selectNews()，
-   保证两条入口对 state.imported / 编辑框 / 拆解按钮 / 旧结果的改动完全一致。 */
+/* —— 新闻「选中」的两条入口：行为完全一致，都「强制覆盖编辑框 + 立即拆解」——
+   ⚠️ 用户明确要求：点「新闻标题」或点「一键导入」时，都必须无条件清空并用该新闻覆盖
+      编辑框（textarea），再自动触发下方拆解与语料卡片刷新；
+      严禁因为「编辑框里已有内容」而阻拦、跳过或静默忽略点击。
+      因此下面不做任何「编辑框非空就不覆盖」的判断 —— 一律直接覆盖。 */
 function selectNews(n){
   state.imported = n;
-  $('#editor').value = n.title + '\n\n' + n.summary;
+  /* 强制覆盖：不读、不比、不询问编辑框里的旧内容，一律用这条新闻重写 */
+  var text = n.title + '\n\n' + n.summary;
+  $('#editor').value = text;
+  state.importedText = text;              /* 记下本次写入的原文，供 decompose 精确锚定该新闻 */
   $('#btn-decompose').disabled = false;
-  $('#decompose-area').innerHTML = '';   /* 清掉上一屏，旧结果不残留 */
+  $('#decompose-area').innerHTML = '';    /* 清掉上一屏，旧结果不残留 */
 }
 
-/* 「一键导入」：只把新闻放进编辑框，由用户自己点「开始拆解」（行为保持不变） */
+/* 「一键导入」：与点击标题同一条路径 —— 覆盖编辑框后立即拆解 */
 function importNews(n){
   selectNews(n);
   $('#editor').focus();
-  toast('已导入编辑框');
+  toast('已导入编辑框，开始拆解');
+  decompose();
 }
 
-/* 「点击标题」：选中后立即触发拆解，下方拆解区与语料卡片随之刷新 */
+/* 「点击标题」：与「一键导入」完全同一效果，仅省掉编辑框聚焦与提示语 */
 function selectNewsAndDecompose(n){
   selectNews(n);
   decompose();
 }
 
 async function decompose(){
-  const text = $('#editor').value.trim();
+  let text = $('#editor').value.trim();
+  /* 兜底自愈：若编辑框意外为空、但已有选中的新闻，就用该新闻内容补上再拆，
+     绝不因为编辑框状态而静默放弃（用户要求：点击必须生效、不得被阻拦）。 */
+  if (!text && state.imported){
+    text = $('#editor').value = state.imported.title + '\n\n' + state.imported.summary;
+    state.importedText = text;
+  }
   if (!text){ toast('编辑框是空的，先导入或粘贴一段韩文新闻'); return; }
   /* —— 并发修复：「点了新新闻、界面还是旧内容」的真根因 ——
      旧写法这里是 `if (state.busy) return;`，而「一键导入」又会把本按钮
@@ -3296,7 +3338,8 @@ async function decompose(){
      用它自己的 标题+摘要 做匹配种子，而不是拿编辑框文本反推 ——
      编辑框文本用户可以随手改，拿它选卡会出现「看着是 A、用的是 B」。
      绑定有效性：编辑框里仍是这条新闻（标题还在）才认；改过就作废，回退粘贴模式。 */
-  const imported = (state.imported && text.indexOf(state.imported.title) >= 0) ? state.imported : null;
+  const imported = (state.imported && state.importedText && text === state.importedText)
+                   ? state.imported : null;
   const seed = imported ? (imported.title + ' ' + imported.summary) : text;
 
   const steps = renderSteps();
@@ -3429,6 +3472,7 @@ function init(){
   $('#btn-clear').addEventListener('click', () => {
     $('#editor').value = '';
     state.imported = null;
+    state.importedText = null;
     $('#btn-decompose').disabled = true;
     $('#decompose-area').innerHTML = '';
   });
