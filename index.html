@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="TOPIK 54题大作文 · 韩语新闻精读与正反语料库：从韩文热点新闻到高分作文句式，一键完成精读、提炼与论据套用。">
+<!-- 构建标识：单文件站点没有外部 JS/CSS 可加 ?v=，靠这个标记辨别浏览器拿到的是哪一版。
+     查看方法：DevTools 控制台输入 __BUILD__ ，或右键「查看网页源代码」搜 lyntopik-build。 -->
+<meta name="lyntopik-build" content="20261002-2358">
 <title>TOPIK大作文 · 新闻拆解迁移运用语料库</title>
 <link rel="icon" href="data:,">
 <style>
@@ -1327,6 +1330,12 @@ mark.hl-v{background:#E0F2FE; color:#0284C7;}
    TOPIK 54 大作文 · 新闻精读与正反语料库
    单文件实现：Mock 数据 + 预留后端 API 接口
    ========================================================================== */
+
+/* 构建标识（与 <meta name="lyntopik-build"> 保持一致）。
+   单文件站点没有外部资源可加 ?v=，部署后靠它辨别浏览器实际加载的是哪一版：
+   控制台输入 __BUILD__ 即可看到；对不上就是缓存/走错 URL。 */
+window.__BUILD__ = '20261002-2358';
+console.log('[LYNTOPIK] build ' + window.__BUILD__);
 
 /* ---------------------------------------------------------------------------
    0. 后端接口预留层
