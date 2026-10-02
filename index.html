@@ -380,7 +380,7 @@ textarea.input{resize:vertical; min-height:132px; line-height:1.75;}
 .news-meta{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:7px;}
 .news-meta .src{font-size:12px; font-weight:650; color:var(--navy);}
 .news-meta .time{font-size:11.5px; color:var(--ink-3);}
-.news-title{font-size:14.5px; font-weight:600; letter-spacing:-.012em; line-height:1.5;}
+.news-title{font-size:14.5px; font-weight:600; letter-spacing:-.012em; line-height:1.5; cursor:pointer;}
 .news-sum{
   margin-top:5px; font-size:13px; line-height:1.65; color:var(--ink-2);
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
@@ -2257,7 +2257,18 @@ const MARKER_CN = {
 };
 function markerCn(m){ return MARKER_CN[m] || '高频连接词'; }
 
-function dimMeta(sec){ return DIM_META[sec.dot] || { emoji:'', title:sec.cn || '', ko:'', tags:[] }; }
+function dimMeta(sec){
+  const base = DIM_META[sec.dot] || { emoji:'', title:sec.cn || '', ko:'', tags:[] };
+  /* 思维启发标签随卡派生：区块头标签必须反映「本卡本区块」的真实切入点，
+     否则扩维度后会挂过期标签（c2 原因分析曾错挂「时代/技术」、漏「政府/制度」「经济/产业」）。
+     派生失败（条目一个映射都没有）才回退 DIM_META 的静态表。 */
+  const derived = [];
+  (sec.items || []).forEach(it => {
+    const a = dimAngle(it.k);
+    if (a && derived.indexOf(a) < 0) derived.push(a);
+  });
+  return Object.assign({}, base, { tags: derived.length ? derived : base.tags });
+}
 function dimAngle(k){ return ANGLE[k] || ''; }
 /* 论据标签原型里带「正方：/反方：」前缀，展示时剥掉，避免与 [正/利] [反/弊] 重复 */
 function stripSide(s){ return String(s).replace(/^\s*(正方|反方)\s*[：:]\s*/, ''); }
@@ -2412,6 +2423,7 @@ const state = {
   news: [],
   imported: null,
   busy: false,
+  runToken: 0,            /* 拆解令牌：每次点击 +1，旧任务的迟到结果据此自我作废 */
   fetched: false          /* 列表是否已渲染过：决定条件变化时是否实时重过滤 */
 };
 
@@ -2716,14 +2728,14 @@ function renderNews(list){
 
     const btn = el('button', 'btn btn-ghost btn-sm', '一键导入');
     btn.type = 'button';
-    btn.addEventListener('click', () => {
-      state.imported = n;
-      $('#editor').value = n.title + '\n\n' + n.summary;
-      $('#editor').focus();
-      $('#btn-decompose').disabled = false;
-      toast('已导入编辑框');
-      $('#decompose-area').innerHTML = '';
-    });
+    btn.addEventListener('click', () => importNews(n));
+
+    /* 点击「新闻标题文字」＝ 选中该新闻并立刻拆解。
+       与「一键导入」共用同一个选中动作 selectNews()，两者对 state.imported /
+       编辑框 / 拆解按钮的状态改动完全一致；差别只在标题点一下直接往下拆，
+       省掉再点一次「开始拆解」。 */
+    const titleEl = left.querySelector('.news-title');
+    if (titleEl) titleEl.addEventListener('click', () => selectNewsAndDecompose(n));
 
     row.appendChild(left);
     row.appendChild(btn);
@@ -2971,9 +2983,20 @@ function renderResult(card, news){
   b1.appendChild(wl);
 
   /* 新闻完整原文：默认只精读核心 1 段，点按钮平滑展开全文
-     （段落数由 card.full.paras 动态决定，逐段渲染 第1段 ~ 第N段，不做任何截断） */
+     （段落数动态决定，逐段渲染 第1段 ~ 第N段，不做任何截断）
+
+     —— 原文精读的数据绑定修复：「点哪条新闻都显示同一条」的渲染根因 ——
+     · 有选中新闻、且它不是本卡原文的源新闻 → 渲染「那条新闻自己的标题＋摘要」，
+       它才是用户点开的原文；母题卡里存的范文原文只代表母题本身。
+     · 是源新闻（本卡原文就是从它写的，NEWS_SRC 显式登记）或无选中新闻（粘贴模式）
+       → 维持 card.full，逐段精读不变。
+     之前无条件渲染 card.full：16 条新闻里 12 条都会看到「别人的原文」。 */
+  const NEWS_SRC = { n1:'c1', n2:'c2', n3:'c3', n4:'c4', n5:'c5' };  /* 卡内范文的源新闻 */
+  const isSrc = news && NEWS_SRC[news.id] === card.id;
   const full = card.full;
-  const paras = (full && full.paras) || [];
+  const paras = (news && !isSrc)
+    ? [{ ko: news.title }, { ko: news.summary }]
+    : ((full && full.paras) || []);
   if (paras.length){
     const exp = el('div', 'exp');
     const btn = el('button', 'exp-btn');
@@ -2987,20 +3010,26 @@ function renderResult(card, news){
     const inner = el('div', 'exp-inner');
     const art = el('div', 'art');
     art.innerHTML =
-      '<div class="art-src"><span class="pill pill-grey ko">원문 출처 · ' + esc(full.src) + '</span>' +
-      '<span>共 ' + paras.length + ' 段 · 与上方精读原句同源</span></div>';
+      '<div class="art-src"><span class="pill pill-grey ko">원문 출처 · ' +
+        ((news && !isSrc) ? esc(news.source + ' · ' + ((news.g && news.g[0]) || news.topic)) : esc(full.src)) +
+      '</span>' +
+      '<span>共 ' + paras.length + ' 段 · ' + ((news && !isSrc) ? '你选中的新闻' : '与上方精读原句同源') + '</span></div>';
     paras.forEach((p, i) => {
       const blk = el('div', 'art-para');
       blk.appendChild(el('span', 'pn', '第 ' + (i + 1) + ' 段 / ' + paras.length));
       const kl = el('p', 'art-p');
       kl.innerHTML = markKo(p.ko, card);
-      const cl = el('p', 'art-cn');
-      cl.innerHTML = markCn(p.cn, card);
       blk.appendChild(kl);
-      blk.appendChild(cl);
+      if (p.cn){
+        const cl = el('p', 'art-cn');
+        cl.innerHTML = markCn(p.cn, card);
+        blk.appendChild(cl);
+      }
       art.appendChild(blk);
     });
-    art.appendChild(el('p', 'art-note', '※ 演示用示例原文；正式版随每周热点同步更新真实韩网新闻全文。'));
+    art.appendChild(el('p', 'art-note', (news && !isSrc)
+      ? '※ 以上是你选中的新闻原文（标题＋摘要）；本卡是「' + esc(card.title) + '」母题语料卡，母题范文原文见对应源新闻。'
+      : '※ 演示用示例原文；正式版随每周热点同步更新真实韩网新闻全文。'));
     inner.appendChild(art);
     body.appendChild(inner);
     btn.addEventListener('click', () => {
@@ -3216,25 +3245,70 @@ function renderResult(card, news){
   box.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
+/* —— 新闻「选中」的两条入口共用同一个动作 ——
+   「一键导入」按钮 与 「点击新闻标题」 都先走 selectNews()，
+   保证两条入口对 state.imported / 编辑框 / 拆解按钮 / 旧结果的改动完全一致。 */
+function selectNews(n){
+  state.imported = n;
+  $('#editor').value = n.title + '\n\n' + n.summary;
+  $('#btn-decompose').disabled = false;
+  $('#decompose-area').innerHTML = '';   /* 清掉上一屏，旧结果不残留 */
+}
+
+/* 「一键导入」：只把新闻放进编辑框，由用户自己点「开始拆解」（行为保持不变） */
+function importNews(n){
+  selectNews(n);
+  $('#editor').focus();
+  toast('已导入编辑框');
+}
+
+/* 「点击标题」：选中后立即触发拆解，下方拆解区与语料卡片随之刷新 */
+function selectNewsAndDecompose(n){
+  selectNews(n);
+  decompose();
+}
+
 async function decompose(){
   const text = $('#editor').value.trim();
   if (!text){ toast('编辑框是空的，先导入或粘贴一段韩文新闻'); return; }
-  if (state.busy) return;
+  /* —— 并发修复：「点了新新闻、界面还是旧内容」的真根因 ——
+     旧写法这里是 `if (state.busy) return;`，而「一键导入」又会把本按钮
+     disabled 置回 false —— 于是上一条的拆解动画还没跑完时点新新闻：
+     按钮看着能点，点下去却被静默吞掉；紧接着上一条的异步结果落到已被清空的
+     区域上，全屏就始终是上一条新闻的内容。
+     改成「令牌作废制」：每次点击都登记新令牌并立即开跑；先跑完的旧任务
+     回来发现令牌已被顶掉，自己放弃渲染，绝不覆盖新结果。 */
+  const token = state.runToken = (state.runToken || 0) + 1;
   state.busy = true;
   $('#btn-decompose').disabled = true;
+
+  /* —— 数据绑定修复①：「点哪条新闻都显示同一条」的选卡根因 ——
+     选卡必须锚定「用户点中的那条新闻」（一键导入时已存进 state.imported），
+     用它自己的 标题+摘要 做匹配种子，而不是拿编辑框文本反推 ——
+     编辑框文本用户可以随手改，拿它选卡会出现「看着是 A、用的是 B」。
+     绑定有效性：编辑框里仍是这条新闻（标题还在）才认；改过就作废，回退粘贴模式。 */
+  const imported = (state.imported && text.indexOf(state.imported.title) >= 0) ? state.imported : null;
+  const seed = imported ? (imported.title + ' ' + imported.summary) : text;
 
   const steps = renderSteps();
   const body = { text: text, level: SCRAPER_SPEC.level, keyword: state.keyword };
 
   /* Mock 走本地；接后端时 api.decompose 会直接返回服务端结果 */
-  const fallback = () => new Promise(r => setTimeout(() => r({ card: pickCorpus(text) }), 240));
+  const fallback = () => new Promise(r => setTimeout(() => r({ card: pickCorpus(seed) }), 240));
   const [data] = await Promise.all([
     api.decompose(body, fallback),
     runSteps(steps)
   ]);
 
-  const card = data.card || pickCorpus(text);
-  renderResult(card, state.imported);
+  /* 数据绑定修复②：选中新闻自带卡绑定（newsIndex 建索引时已算好缓存在新闻对象上），
+     按选中的新闻取卡；没有绑定的（直接粘贴文本）才走关键词匹配。
+     绝不写死 CORPUS[0] 之类的兜底 —— 匹配不到就老实走 pickCorpus。 */
+  const card = (imported && imported._card && CORPUS.find(c => c.id === imported._card)) ||
+               data.card || pickCorpus(seed);
+  /* 期间用户又点了一次（或换了新闻）→ 本次已是过期结果，交给更新的那次渲染。
+     绝不在这里落笔：否则晚到的旧结果会把新选择盖掉。 */
+  if (token !== state.runToken) return;
+  renderResult(card, imported);
   state.busy = false;
   $('#btn-decompose').disabled = false;
 }
