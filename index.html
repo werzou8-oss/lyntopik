@@ -710,6 +710,31 @@ mark.hl-v{background:#E0F2FE; color:#0284C7;}
 }
 .dko .ko{flex:1; min-width:0; font-size:12.8px; line-height:1.68; color:var(--ink);}
 
+/* 三段式（主张 / 论据 / 小结）—— 仅「原因层 / 对策层」的多维度归因条目使用 */
+.darg{flex:1; min-width:0;}
+.darg-row + .darg-row{margin-top:7px; padding-top:7px; border-top:1px dashed rgba(15,23,42,.10);}
+.darg-head{display:flex; align-items:center; gap:6px;}
+.darg-t{
+  font-size:10.5px; font-weight:800; letter-spacing:.02em;
+  color:#1A56DB; background:rgba(26,86,219,.10);
+  border-radius:6px; padding:1.5px 7px;
+}
+.darg-row:nth-child(2) .darg-t{color:#0F766E; background:rgba(15,118,110,.10);}
+.darg-row:nth-child(3) .darg-t{color:#B45309; background:rgba(180,83,9,.10);}
+.darg-ko{margin-top:4px; font-size:12.8px; line-height:1.68; color:var(--ink);}
+.darg-cn{margin-top:3px; font-size:12px; line-height:1.62; color:var(--ink-3);}
+
+/* 高阶语法三件套 —— 只有带 grammar.list 的卡片才渲染 */
+.gl3{margin-top:11px; border:1px solid rgba(15,23,42,.08); border-radius:11px; background:#FCFCFD; overflow:hidden;}
+.gl3-head{display:flex; align-items:center; gap:8px; padding:8px 11px; background:rgba(254,243,199,.55); border-bottom:1px solid rgba(15,23,42,.07);}
+.gl3-head .gl3-t{font-size:12px; font-weight:800; color:var(--ink);}
+.gl3-head .gl3-sub{font-size:11px; color:var(--ink-3); margin-left:auto;}
+.gl3-row{padding:9px 11px;}
+.gl3-row + .gl3-row{border-top:1px dashed rgba(15,23,42,.10);}
+.gl3-p{font-family:var(--font-ko); font-size:13px; font-weight:800; color:#B45309;}
+.gl3-eg{margin-top:4px; font-size:12.4px; line-height:1.66; color:var(--ink-2);}
+.gl3-cn{margin-top:4px; font-size:11.8px; line-height:1.6; color:var(--ink-3);}
+
 .card-foot{
   margin-top:16px; padding:14px 0 0; border-top:1px solid var(--line-2);
   display:flex; align-items:center; gap:10px; flex-wrap:wrap;
@@ -2202,7 +2227,11 @@ const ANGLE = {
   '개인적 요인':'个人观念',        '제도/환경적 요인':'社会环境',
   '시대/기술적 요인':'时代/技术',
   '개인/가정':'个人/家庭',         '정부/제도':'政府/制度',
-  '기업/사회':'企业'
+  '기업/사회':'企业',
+  /* —— 多维度归因新增（c2 低生育率）：个人 / 社会文化 / 国家政策 / 经济 / 社会共同体 —— */
+  '일과 가정 양립':'社会结构',      '사회·문화적 요인':'社会环境',
+  '국가·정책적 요인':'政府/制度',   '경제적 요인':'经济/产业',
+  '사회·공동체':'文化/伦理'
 };
 
 const ARGTAG = {
@@ -2222,7 +2251,9 @@ const MARKER_CN = {
   '만큼':'与…相应地',
   '한편으로는':'另一方面',
   '따라서':'因此',
-  '또한':'此外 · 同时'
+  '또한':'此外 · 同时',
+  '반면':'相反 · 与之相对',
+  '결국':'归根结底 · 结果'
 };
 function markerCn(m){ return MARKER_CN[m] || '高频连接词'; }
 
@@ -2872,10 +2903,27 @@ function renderResult(card, news){
       if (it.idea) h += '<p class="didea"><b>思路</b> · ' + esc(it.idea) + '</p>';
       d.innerHTML = h;
       const ko = el('div', 'dko');
-      ko.appendChild(el('span', 'ko', esc(it.ko)));
+      /* 三段式：主张 + 论据（原文事实）+ 小结。只有「原因层 / 对策层」的条目带 it.arg，
+         每一条论据都必须在新闻原句中有出处，不允许自拟 —— 规范见 _tools/_patch-n2.js 的自检。 */
+      const three = Array.isArray(it.arg) && it.arg.length >= 3;
+      if (three){
+        const wrap = el('div', 'darg');
+        it.arg.forEach(a => {
+          const row = el('div', 'darg-row');
+          row.innerHTML =
+            '<div class="darg-head"><span class="darg-t">' + esc(a.t) + '</span></div>' +
+            '<p class="darg-ko ko">' + esc(a.ko) + '</p>' +
+            (a.cn ? '<p class="darg-cn">' + esc(a.cn) + '</p>' : '');
+          wrap.appendChild(row);
+        });
+        ko.appendChild(wrap);
+      } else {
+        ko.appendChild(el('span', 'ko', esc(it.ko)));
+      }
       ko.appendChild(copyBtn(it.ko, it.k));
       d.appendChild(ko);
-      if (it.cn) d.appendChild(el('p', 'dcn', '<b>译文</b> · ' + esc(it.cn)));
+      /* 三段式条目的中文已逐条跟在「论据 / 小结」下面，不再重复整段译文 */
+      if (it.cn && !three) d.appendChild(el('p', 'dcn', '<b>译文</b> · ' + esc(it.cn)));
       box.appendChild(d);
     });
     if (extra) box.appendChild(extra);
@@ -2896,6 +2944,26 @@ function renderResult(card, news){
     '<span class="k">语法</span><span class="v"><b class="ko">' + esc(card.grammar.pattern) + '</b> —— ' + esc(card.grammar.cn) + '</span>'));
   b1.appendChild(kv);
   b1.appendChild(hlLegend(card));
+
+  /* 高阶语法三件套：只有带 grammar.list 的卡片才渲染，
+     每条语法点都必须能在本篇新闻原句中找到用例（其余卡片保持原来的单条语法行）。 */
+  const g3 = (card.grammar && card.grammar.list) || [];
+  if (g3.length){
+    const gl = el('div', 'gl3');
+    gl.innerHTML =
+      '<div class="gl3-head"><span aria-hidden="true">🧩</span>' +
+      '<span class="gl3-t">高阶语法三件套</span>' +
+      '<span class="gl3-sub">均可回溯到本篇新闻原句</span></div>';
+    g3.forEach(g => {
+      const row = el('div', 'gl3-row');
+      row.innerHTML =
+        '<div class="gl3-p">' + esc(g.pattern) + '</div>' +
+        (g.ko ? '<p class="gl3-eg ko">' + esc(g.ko) + '</p>' : '') +
+        (g.cn ? '<p class="gl3-cn">' + esc(g.cn) + '</p>' : '');
+      gl.appendChild(row);
+    });
+    b1.appendChild(gl);
+  }
   const wl = el('div', 'wordlist');
   wl.style.marginTop = '11px';
   card.vocab.forEach(v => wl.appendChild(el('span', 'pill pill-grey ko', esc(v.ko) + ' · ' + esc(v.cn))));
@@ -3088,9 +3156,40 @@ function renderResult(card, news){
 
   box.appendChild(grid);
 
+  /* 万能金句迁移模板
+     —— 原先 card.formula 只出现在「一键复制」文本里，页面上完全看不到。
+        这本身就是交付的一部分（可迁移模板），所以补上渲染。
+        模板里的 ~ 是「空格位」，换成任意母题即可复用到别的题目。 */
+  if (card.formula && card.formula.ko){
+    const fm = el('div', 'formula');
+    fm.innerHTML =
+      '<div class="head"><span class="pill pill-navy pill-dot">万能金句迁移模板</span>' +
+      '<span class="pill pill-grey" style="margin-left:auto;">三处空格可换任意母题</span></div>' +
+      '<div class="ko">' + esc(card.formula.ko) + '</div>' +
+      '<p class="cn">' + esc(card.formula.cn) + '</p>';
+    box.appendChild(fm);
+  }
+
   /* 底栏：复制整段 */
   const foot = el('div', 'card-foot');
   foot.style.cssText = 'margin-top:18px;padding:15px 0 0;border-top:1px solid var(--line-2);';
+  /* 一键复制里带上「多维度归因」与「高阶语法三件套」：
+     原因层 / 对策层的三段式原样输出，粘进作文就能直接当本论骨架用。 */
+  const attrText = card.dims.secs.slice(2).map(sec =>
+    '【' + sec.tag + '】' + (sec.cn ? '（' + sec.cn + '）' : '') + '\n' +
+    sec.items.map(it => '· ' + it.k + '（' + it.c + '）\n' +
+      (Array.isArray(it.arg) && it.arg.length
+        ? it.arg.map(a => '  [' + a.t + '] ' + a.ko).join('\n')
+        : '  ' + it.ko)
+    ).join('\n')
+  ).join('\n\n');
+
+  const g3List = (card.grammar && card.grammar.list) || [];
+  const g3Text = g3List.length
+    ? '高阶语法三件套：\n' + g3List.map((g, i) =>
+        (SENT_NUM[i] || '·') + ' ' + g.pattern + '\n   ' + (g.ko || '') + '\n   ' + (g.cn || '')).join('\n')
+    : '';
+
   const fullText =
     '【' + card.title + '】\n' +
     '原句：' + card.ko + '\n译文：' + card.cn + '\n\n' +
@@ -3100,6 +3199,8 @@ function renderResult(card, news){
     '【社会层面】反方 · ' + soc.con.label + '\n' + soc.con.ko + '\n' + soc.con.cn + '\n\n' +
     '对策（54 题第 3 问）· ' + plan.label + '\n' + plan.ko + '\n' + plan.cn + '\n' +
     plan.swaps.map(s => '· ' + s.ko + '\n  ' + s.cn).join('\n') + '\n\n' +
+    attrText + '\n\n' +
+    (g3Text ? g3Text + '\n\n' : '') +
     '套用公式：\n' + card.formula.ko + '\n' + card.formula.cn + '\n\n' +
     '全篇整合骨架（引入段 15 : 本论段 70 : 结论段 15）：\n' + skelText;
   const all = el('button', 'btn btn-primary btn-sm', '复制本篇全部语料');
