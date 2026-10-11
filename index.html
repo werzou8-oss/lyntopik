@@ -7,7 +7,7 @@
 <!-- 构建标识：单文件站点没有外部 JS/CSS 可加 ?v=，靠这个标记辨别浏览器拿到的是哪一版。
      查看方法：DevTools 控制台输入 __BUILD__ ，或右键「查看网页源代码」搜 lyntopik-build。
      ⚠️ 每次改代码必须同步更新此处的号 + 下面 window.__BUILD__，否则无法分辨新旧。 -->
-<meta name="lyntopik-build" content="20261004-0050">
+<meta name="lyntopik-build" content="20261011-1930">
 <!-- 防强缓存声明（对 file:// 及部分老浏览器有效；HTTP 环境真正生效的是页脚的自愈脚本） -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -298,7 +298,7 @@ textarea.input{resize:vertical; min-height:132px; line-height:1.75;}
 .chip.is-on{background:var(--navy); border-color:var(--navy); color:#fff; font-weight:600;}
 .chip.is-on .chip-ko{color:rgba(255,255,255,.78);}
 
-/* 分类标签锁定态（仅「科技与AI」免费开放，其余为早鸟通卡专属） */
+/* 分类标签锁定态（仅「科技与数字」免费开放，其余为早鸟通卡专属） */
 .chip.is-locked{opacity:.5; cursor:not-allowed;}
 .chip.is-locked:hover{border-color:var(--line); color:var(--ink-2); background:#fff;}
 .chip.is-locked:hover .chip-ko{color:var(--ink-3); opacity:1;}
@@ -1617,7 +1617,7 @@ p.dim-empty-c{margin:6px 0 0; font-size:11.6px; line-height:1.72; color:var(--in
           <div class="field-grid">
             <div class="field wide">
               <label class="field-label" for="kw-input">关键词 · 可直接输入任意韩文词</label>
-              <input id="kw-input" class="input" type="text" placeholder="输入任意韩文关键词，如 AI、기후변화、저출산 …" value="과학기술·인공지능" autocomplete="off">
+              <input id="kw-input" class="input" type="text" placeholder="输入任意韩文关键词，如 AI、기후변화、저출산 …" value="과학기술·디지털" autocomplete="off">
               <p class="chips-label">TOPIK 54题真题高频母题示范</p>
               <div class="chips" id="kw-chips"></div>
             </div>
@@ -1862,7 +1862,7 @@ p.dim-empty-c{margin:6px 0 0; font-size:11.6px; line-height:1.72; color:var(--in
 /* 构建标识（与 <meta name="lyntopik-build"> 保持一致）。
    单文件站点没有外部资源可加 ?v=，部署后靠它辨别浏览器实际加载的是哪一版：
    控制台输入 __BUILD__ 即可看到；对不上就是缓存/走错 URL。 */
-window.__BUILD__ = '20261004-0050';
+window.__BUILD__ = '20261011-1930';
 console.log('[LYNTOPIK] build ' + window.__BUILD__);
 
 /* —— HTML 强缓存自愈 ——
@@ -1973,13 +1973,30 @@ const WORDS_WITHIN_MAX = w => (parseInt(String(w).split('-')[1], 10) || 0) <= SC
    free = 唯一免费开放的分类（展示前 FREE_PREVIEW 篇精选范文）；locked = 早鸟通卡专属
    注：输入有效卡密解锁后，locked 分类全部开放，FREE_PREVIEW 截断同时失效（全量展示） */
 const FREE_PREVIEW = 3;   /* 未解锁时免费分类展示的范文条数；解锁后不截断 */
+/* ⭐ 分类体系 v2（用户令 2026-10-11）：对齐 TOPIK 54 标准备考维度，六类精简为五类。
+   旧「媒体与信息」并入「科技与数字」（数字媒体/信息传播），其余按旧维度重命名：
+     科技与AI → 科技与数字 ｜ 教育与发展 → 教育与成长 ｜ 人口与社会结构 → 人口与环境
+     价值观与心理 → 社会与价值观 ｜ 职场与工作 → 职业与个人发展
+   ⚠️「免费」分类排在最前（沿用「先给免费试看」的既有 UX），故 科技与数字 居首。
+   ⚠️ topics 里的中文名必须与 news[].g 逐字一致 —— 这是点击分类能出结果的唯一凭据
+      （keywordHit() 强命中 = KEYWORDS.find(k => k.ko===raw || k.cn===raw)
+                              && (n.g||[]).some(g => k.topics.indexOf(g) >= 0)）。
+      topics 漂一个字 → 强命中**静默失败**、退到全文模糊匹配：不报错、列表照样有内容，
+      所以肉眼查不出来。已挂机检：check-crawl Q6「强命中凭据不漂移」+ Q5 负向（灯会灭）。
+   ⚠️ 每个条目**只挂 1 个分类**（用户令 2026-10-11「严格单标签」：同一个议题不得在两个
+      分类下各出现一次）。news[].g / corpus[].tags 仍保留数组形态，方便将来改回多标签时
+      前端零改动；但门禁要求长度恰好 1（check-crawl Q1 · check.js「数据层分类归属唯一」）。
+   ⚠️ 点分类 = **严格归属过滤**（用户令 2026-10-11「只允许出现在一个栏目下」）：
+      keywordHit() 一旦发现 raw === 某分类的 ko/cn，**立即按归属返回**，绝不退到全文/模糊
+      兜底 —— 于是只有「数据层挂了这个分类」的条目才可能出现在该栏目列表里，同一标题不可能
+      同时出现在两个栏目。自由输入的非分类关键词（AI、기후변화…）仍走全文 + 模糊检索。
+      已挂机检：check.js「点分类渲染 ⊆ 数据层归属（跨栏目零重叠）」。 */
 const KEYWORDS = [
-  {cn:'科技与AI',       ko:'과학기술·인공지능', topics:['科技与AI'],      free:true},
-  {cn:'职场与工作',     ko:'직업·직장·노동',    topics:['职场与工作'],    locked:true},
-  {cn:'教育与发展',     ko:'교육',             topics:['教育与发展'],    locked:true},
-  {cn:'人口与社会结构',  ko:'인구·사회구조',     topics:['人口与社会结构'], locked:true},
-  {cn:'价值观与心理',   ko:'가치관·마음',       topics:['价值观与心理'],  locked:true},
-  {cn:'媒体与信息',     ko:'미디어·정보',       topics:['媒体与信息'],    locked:true}
+  {cn:'科技与数字',     ko:'과학기술·디지털', topics:['科技与数字'],     free:true},
+  {cn:'教育与成长',     ko:'교육·성장',      topics:['教育与成长'],     locked:true},
+  {cn:'社会与价值观',   ko:'사회·가치관',     topics:['社会与价值观'],   locked:true},
+  {cn:'人口与环境',     ko:'인구·환경',      topics:['人口与环境'],     locked:true},
+  {cn:'职业与个人发展',  ko:'직업·자기계발',   topics:['职业与个人发展'], locked:true}
 ];
 
 /* 锁定分类的解锁提示（统一口径） */
@@ -2407,15 +2424,15 @@ async function restoreLocked(){
 /* ---------------------------------------------------------------------------
    2. Mock 新闻池
    ------------------------------------------------------------------------- */
-/* 免费试看层：属于「科技与AI」分类的新闻，明文内联（这是有意公开的内容）
-   其余 13 条锁定新闻已从源码移除，解锁后由 loadLocked() 注入
+/* 免费试看层：属于「科技与数字」分类的新闻，明文内联（这是有意公开的内容）
+   其余 17 条锁定新闻已从源码移除，解锁后由 loadLocked() / applyLockedData() 注入
    —— 明文源见 _src/locked-corpus.json（不参与部署） */
 const NEWS_FREE = [
   {
     "id": "n1",
     "card": "c1",
     "source": "공공데이터",
-    "topic": "科技与AI",
+    "topic": "科技与数字",
     "title": "생성형 AI 이미지, 국제 공모전 수상 놓고 논쟁",
     "summary": "인공지능이 그려 낸 그림이 국제 공모전에서 수상하면서, 창작의 주체를 어디까지로 볼 것인지를 둘러싼 논의가 다시 활기를 띠고 있다. 학습에 쓰인 자료의 출처를 투명하게 밝히고 창작자의 권리를 먼저 세워야 한다는 요구와, 기술 활용을 지나치게 묶으면 산업 경쟁력이 떨어진다는 우려가 맞선다.",
     "hoursAgo": 5,
@@ -2429,7 +2446,7 @@ const NEWS_FREE = [
       "창작"
     ],
     "g": [
-      "科技与AI"
+      "科技与数字"
     ],
     "tags": [
       "그림",
@@ -2445,7 +2462,7 @@ const NEWS_FREE = [
     "id": "n7",
     "card": "f2",
     "source": "공공데이터",
-    "topic": "科技与AI",
+    "topic": "科技与数字",
     "title": "AI 학습 데이터 무단 사용 논란, 창작자 권리 침해인가",
     "summary": "AI가 방대한 데이터를 학습하는 과정에서 창작자의 권리가 침해될 수 있다는 지적이 이어지고 있다. 반면, 기술 발전을 늦추는 규제가 오히려 산업 경쟁력을 떨어뜨릴 수 있다는 반론도 제기된다.",
     "hoursAgo": 120,
@@ -2459,8 +2476,7 @@ const NEWS_FREE = [
       "규제"
     ],
     "g": [
-      "科技与AI",
-      "媒体与信息"
+      "科技与数字"
     ],
     "tags": [
       "기술",
@@ -2491,9 +2507,7 @@ const NEWS_FREE = [
       "AI"
     ],
     "g": [
-      "教育与发展",
-      "科技与AI",
-      "媒体与信息"
+      "科技与数字"
     ],
     "tags": [
       "학생",
@@ -2514,9 +2528,9 @@ const CORPUS_FREE = [
   {
     "id": "c1",
     "tags": [
-      "科技与AI"
+      "科技与数字"
     ],
-    "badge": "【科技/AI】",
+    "badge": "【科技/数字】",
     "title": "AI 绘画获奖引发的伦理争议",
     "ko": "생성형 AI로 그린 그림이 국제 공모전에서 상을 받으면서, 창작의 주체가 누구인가라는 문제가 다시 제기되고 있다.",
     "cn": "随着用生成式 AI 绘制的作品在国际公募展上获奖，「创作的主体究竟是谁」这一问题再次浮现。",
@@ -2875,8 +2889,8 @@ const CORPUS_FREE = [
   },
   {
     "id": "f2",
-    "tags": ["科技与AI"],
-    "badge": "【科技/AI】",
+    "tags": ["科技与数字"],
+    "badge": "【科技/数字】",
     "title": "AI 学习数据争议与创作者权利",
     "ko": "AI가 방대한 데이터를 학습하면서 창작자의 권리를 어떻게 보호할 것인가가 새로운 과제로 제기되고 있다.",
     "cn": "随着 AI 学习海量数据，「如何保护创作者权利」正成为新的课题。",
@@ -3045,8 +3059,8 @@ const CORPUS_FREE = [
   },
   {
     "id": "f3",
-    "tags": ["教育与发展"],
-    "badge": "【교육/격차】",
+    "tags": ["科技与数字"],
+    "badge": "【教育/数字】",
     "title": "在线授课扩大与数字落差",
     "ko": "온라인 수업이 확대되는 가운데 디지털 격차가 학력 격차로 이어진다는 우려가 커지고 있다.",
     "cn": "在线授课扩大的同时，「数字落差将转化为学业差距」的忧虑正在增大。",
@@ -3672,7 +3686,7 @@ function copyBtn(text, label){
    5. 状态
    ------------------------------------------------------------------------- */
 const state = {
-  keyword: '과학기술·인공지능',
+  keyword: '과학기술·디지털',
   news: [],
   imported: null,
   busy: false,
@@ -3695,7 +3709,7 @@ function buildKeywords(){
     b.dataset.ko = k.ko;
     b.dataset.cn = k.cn;
     b.dataset.locked = isLocked ? '1' : '0';
-    b.title = isLocked ? (k.cn + ' · ' + LOCK_TIP) : ('点击填入真题母题关键词：' + k.ko);
+    b.title = isLocked ? (k.cn + ' · ' + LOCK_TIP) : ('点击查看该分类（只显示归属本分类的内容）：' + k.ko);
     b.innerHTML =
       '<span>' + esc(k.cn) + '</span>' +
       '<span class="chip-ko">' + esc(k.ko) + '</span>' +
@@ -3895,8 +3909,21 @@ function fuzzyHit(idx, needle){
    同时给出强度：标题/摘要/标签命中 = 强(1)；仅四维发散关键词命中 = 弱(0)，排序时靠后 */
 function keywordHit(n, raw, kw){
   if (!kw){ n._strong = 1; return true; }
+
+  /* ⭐ 分类栏位 = 硬过滤（用户令 2026-10-11「一条内容只允许出现在一个栏目下」）。
+     当 raw 恰好是一个已登记分类的韩文名或中文名时，本次检索按**栏目归属**判定：
+     只认数据层 news[].g 命中该分类 topics，**直接返回，绝不退到下面的全文 / 词内模糊兜底**。
+     ⚠️ 为什么必须在这里截断（旧行为实测）：强命中失败后继续拿关键词去正文与四维词表里
+     模糊找，于是一条新闻会同时出现在多个栏目里 —— 实测「재택근무 축소 움직임」在
+     科技/教育/社会/人口/职业 5 个栏目全出现、「AI 학습 데이터 …」同时出现在 3 个栏目。
+     用户看到的就是「同一条内容在两个分类下重复出现」。严格归属后这在结构上不可能发生。
+     （自由输入的非分类关键词（如「AI」「기후변화」）仍走下面的全文 + 模糊检索，不受影响。） */
   const topic = KEYWORDS.find(k => k.ko === raw || k.cn === raw);
-  if (topic && (n.g || []).some(g => topic.topics.indexOf(g) >= 0)){ n._strong = 1; return true; }
+  if (topic){
+    const member = (n.g || []).some(g => topic.topics.indexOf(g) >= 0);
+    n._strong = member ? 1 : 0;
+    return member;
+  }
 
   const idx = newsIndex(n);
   const parts = kw.split(/[·・/,，、\s]+/).filter(p => p.length > 0);
@@ -3984,6 +4011,7 @@ function renderNews(list){
        渲染前强制建一次索引（有缓存，重复调用零成本）。 */
     newsIndex(n);
     const row = el('div', 'news-item');
+    row.dataset.id = n.id;   /* 供机检按 id 核对「本条归属哪个栏目」（不改变视觉） */
     const left = el('div');
     left.style.minWidth = '0';
     left.innerHTML =
@@ -4153,6 +4181,31 @@ const TOPIC_MAP = [
   { card:'c5',
     core:['고령','노인','돌봄','복지'],
     weak:['노후','요양','은퇴'] },
+  /* —— v2 新增（用户令 2026-10-11）：c6~c12 补进母题匹配表 ——
+     补之前：粘贴文本只能认领 c1~c5，后加的 7 张卡「点得开、粘不进」（遗留项）。
+     ⚠️ core 只挑「别的卡不会同时命中的特征词」，否则会抢走既有命中（实测教训）。
+     ⚠️ 顺序在这些新卡之间不重要（按 core 词长加权取最优），但**必须在物价垫底行之前**。 */
+  { card:'c6',
+    core:['공공서비스','민원','접근성 격차','행정 접근성','디지털 격차'],
+    weak:['행정','불편','형평성'] },
+  { card:'c7',
+    core:['인구감소지역','지역 소멸','정주 여건','과소 지역'],
+    weak:['소멸','지역 활력'] },
+  { card:'c8',
+    core:['직업훈련','재교육','직무 전환','산업 전환'],
+    weak:['적응력','훈련'] },
+  { card:'c9',
+    core:['자산형성','자산 형성','저축 여력','세대 간 격차'],
+    weak:['저축','출발선'] },
+  { card:'c10',
+    core:['사회보험','가입 신고','노동 환경','적용 범위'],
+    weak:['신고','행정 편의'] },
+  { card:'c11',
+    core:['학교 밖 청소년','노동권','학습권','제도적 안전망'],
+    weak:['청소년','자립'] },
+  { card:'c12',
+    core:['중소기업','스타트업','산업 생태계','집중 지원'],
+    weak:['기술 축적','벤처'] },
   /* 物价 / 消费类议题（垫底规则，必须放在最后）：
      没有专门的物价母题卡，落到 c2 —— 该卡含「经济负担＝个人无法消化的成本」这一维，
      是现有 5 张卡里语义最近的一张。放在最后是为了不抢 c3/c4 的既有命中：
@@ -6727,8 +6780,8 @@ function init(){
 
   $('#btn-fetch').addEventListener('click', fetchNews);
   $('#btn-reset').addEventListener('click', () => {
-    state.keyword = '과학기술·인공지능';
-    $('#kw-input').value = '과학기술·인공지능';
+    state.keyword = '과학기술·디지털';
+    $('#kw-input').value = '과학기술·디지털';
     buildKeywords();
     $('#decompose-area').innerHTML = '';
     toast('已重置为默认关键词');
