@@ -7,7 +7,7 @@
 <!-- 构建标识：单文件站点没有外部 JS/CSS 可加 ?v=，靠这个标记辨别浏览器拿到的是哪一版。
      查看方法：DevTools 控制台输入 __BUILD__ ，或右键「查看网页源代码」搜 lyntopik-build。
      ⚠️ 每次改代码必须同步更新此处的号 + 下面 window.__BUILD__，否则无法分辨新旧。 -->
-<meta name="lyntopik-build" content="20261011-1930">
+<meta name="lyntopik-build" content="20261013-1250">
 <!-- 防强缓存声明（对 file:// 及部分老浏览器有效；HTTP 环境真正生效的是页脚的自愈脚本） -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -578,6 +578,64 @@ textarea.input{resize:vertical; min-height:132px; line-height:1.75;}
 .triq .pill.triq-off::before{opacity:.35;}
 .triq-hint{font-size:11px; font-weight:600; color:var(--ink-3); margin-left:auto;}
 
+/* ---- 商业新闻提取 · AI 纯净重构（固定三问结构）----
+   规范：例句 / 对策 / 原因分析一律 AI 重构（名词化 + 해라체），不逐字复制报道原文长句。
+   可选块 —— 只有卡片声明了 threeQ / mainIdea 才渲染，老卡零影响。 */
+.bizpanel{
+  margin-top:12px; padding:14px 15px; border-radius:13px;
+  background:var(--navy-soft); border:1px solid var(--navy-line);
+}
+.bizpanel-top{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;}
+.bizpanel-top .pill{margin-left:0;}
+.bizpanel-t{font-size:12.8px; font-weight:800; color:var(--ink);}
+.mainidea{
+  background:#fff; border:1px solid var(--line); border-left:3px solid var(--teal);
+  border-radius:10px; padding:10px 12px;
+}
+.mainidea-lab{
+  display:inline-block; font-size:11px; font-weight:800; color:var(--teal-deep);
+  background:var(--teal-soft); border-radius:99px; padding:1px 9px; margin-bottom:4px;
+}
+.mainidea-ko{margin:5px 0 0; font-size:13.4px; line-height:1.74; color:var(--ink);}
+.mainidea-cn{margin:5px 0 0; font-size:12.4px; line-height:1.68; color:var(--ink-2);}
+.q3{margin-top:11px; display:grid; gap:10px;}
+@media(min-width:768px){ .q3{grid-template-columns:repeat(3,minmax(0,1fr));} }
+.q3-block{background:#fff; border:1px solid var(--line); border-radius:11px; padding:11px 12px;}
+.q3-block.q3-1{border-top:3px solid var(--blue);}
+.q3-block.q3-2{border-top:3px solid var(--orange);}
+.q3-block.q3-3{border-top:3px solid var(--teal);}
+.q3-head{display:flex; align-items:center; gap:7px; flex-wrap:wrap;}
+.q3-q{font-size:13px; font-weight:800; color:var(--ink);}
+.q3-tag{font-size:12.2px; font-weight:800; color:var(--ink-2);}
+.q3-tagko{font-size:11px; color:var(--ink-3);}
+.q3-n{margin-left:auto; font-size:10.8px; font-weight:700; color:var(--ink-3);}
+.q3-lead{
+  margin:8px 0 0; font-size:13px; line-height:1.72; color:var(--ink);
+  background:#F8FAFC; border-radius:8px; padding:8px 10px;
+}
+.q3-lead-cn{margin:5px 0 0; font-size:12px; line-height:1.64; color:var(--ink-2);}
+.q3-points{margin-top:9px;}
+.q3-point + .q3-point{margin-top:8px; padding-top:8px; border-top:1px dashed rgba(15,23,42,.10);}
+.q3-pno{font-size:11px; font-weight:800; color:var(--ink-3); margin-right:5px;}
+.q3-ko{font-size:12.7px; line-height:1.7; color:var(--ink);}
+.q3-cn{margin:4px 0 0; font-size:11.8px; line-height:1.62; color:var(--ink-3);}
+
+/* ---- 高阶词汇 · AI 重构示范句 ---- */
+.vdex{margin-top:11px; border:1px solid rgba(15,23,42,.08); border-radius:11px; background:#FCFCFD; overflow:hidden;}
+.vdex-head{
+  display:flex; align-items:center; gap:8px; padding:8px 11px;
+  background:rgba(224,242,254,.55); border-bottom:1px solid rgba(15,23,42,.07);
+  font-size:12px; font-weight:800; color:var(--ink);
+}
+.vdex-head .vdex-sub{font-size:11px; color:var(--ink-3); margin-left:auto;}
+.vdex-row{padding:9px 11px;}
+.vdex-row + .vdex-row{border-top:1px dashed rgba(15,23,42,.10);}
+.vdex-w{display:flex; align-items:baseline; gap:8px;}
+.vdex-w .ko{font-family:var(--font-ko); font-size:12.6px; font-weight:800; color:#0284C7;}
+.vdex-w .vdex-cn{font-size:11.4px; color:var(--ink-3);}
+.vdex-ko{margin:5px 0 0; font-size:12.7px; line-height:1.7; color:var(--ink);}
+.vdex-cn2{margin:3px 0 0; font-size:11.8px; line-height:1.62; color:var(--ink-3);}
+
 .formula{
   margin:16px 22px 0; padding:15px 16px; border-radius:13px;
   background:var(--navy-soft); border:1px solid var(--navy-line);
@@ -827,6 +885,26 @@ mark.ex-blank{
 .gl3-p{font-family:var(--font-ko); font-size:13px; font-weight:800; color:#B45309;}
 .gl3-eg{margin-top:4px; font-size:12.4px; line-height:1.66; color:var(--ink-2);}
 .gl3-cn{margin-top:4px; font-size:11.8px; line-height:1.6; color:var(--ink-3);}
+/* 结构拆解（用户令 2026-10-11：语法条目要能与 vocab 的 AI 示范句对称 —— 「拆解 + 例句」）*/
+.gl3-how{margin-top:5px; font-size:11.8px; line-height:1.68; color:#92400E; background:rgba(254,243,199,.5); border-radius:7px; padding:5px 9px;}
+.gl3-how .gl3-how-t{display:inline-block; font-size:10.5px; font-weight:800; color:#92400E; background:#FEF3C7; border-radius:5px; padding:1px 7px; margin-right:6px; vertical-align:1px;}
+
+/* 📝 高分句（用户令 2026-10-13 第七轮 · 先只在 c6 试样本）：
+   「三问条 + AI 纯净重构」换成「单词、语法组成的高分句」——句子为主体，
+   每句下方标注本句用到的语法点 / 单词。只挂在样本卡（isSample）路径。 */
+.hj{margin-top:11px; border:1px solid rgba(15,23,42,.08); border-radius:11px; background:#FCFCFD; overflow:hidden;}
+.hj-head{
+  display:flex; align-items:center; gap:8px; padding:8px 11px;
+  background:rgba(220,252,231,.55); border-bottom:1px solid rgba(15,23,42,.07);
+  font-size:12px; font-weight:800; color:var(--ink);
+}
+.hj-head .hj-sub{font-size:11px; color:var(--ink-3); margin-left:auto;}
+.hj-row{padding:9px 11px;}
+.hj-row + .hj-row{border-top:1px dashed rgba(15,23,42,.10);}
+.hj-ko{margin:0; font-family:var(--font-ko); font-size:13px; font-weight:700; line-height:1.75; color:var(--ink);}
+.hj-cn{margin:4px 0 0; font-size:11.8px; line-height:1.6; color:var(--ink-3);}
+.hj-tags{margin-top:6px; display:flex; flex-wrap:wrap; gap:5px;}
+.hj-tags .pill{font-size:10.8px;}
 
 /* 公式化拆解（万能句架 + 替换词 + 54 题套用示例）
    —— 用户令：01 板块不能只给「原文 + 翻译」，必须让考生一眼看出这条考点句
@@ -1862,7 +1940,7 @@ p.dim-empty-c{margin:6px 0 0; font-size:11.6px; line-height:1.72; color:var(--in
 /* 构建标识（与 <meta name="lyntopik-build"> 保持一致）。
    单文件站点没有外部资源可加 ?v=，部署后靠它辨别浏览器实际加载的是哪一版：
    控制台输入 __BUILD__ 即可看到；对不上就是缓存/走错 URL。 */
-window.__BUILD__ = '20261011-1930';
+window.__BUILD__ = '20261013-1250';
 console.log('[LYNTOPIK] build ' + window.__BUILD__);
 
 /* —— HTML 强缓存自愈 ——
@@ -5511,7 +5589,34 @@ function tpAnHtml(p, meta){
    来源标签必须跟着走：预置路径喂进来的是议题摘要，不是用户粘贴的文章。 */
 function renderTextPoints(u, opt){
   const isPaste = !(opt && opt.mode === 'preset');
-  const box = el('div', 'tpblock');
+  /* ⭐ 用户令（2026-10-11 第六轮）：01 只留「高阶语法 + 词汇」——
+     考点句提炼与「句式模板 · 万能句架 + 替换词」整段下架，**母题卡模式与粘贴模式同一口径**。
+     本函数保留 lexOnly 分支：只输出「本条高阶词汇 / 语法」栏（无母题卡时 01 的词汇维度）；
+     全量版本（考点句提炼 + 句式模板）已不再被 renderResult 调用。 */
+  const lexOnly = !!(opt && opt.lexOnly);
+  const box = el('div', lexOnly ? 'tp-lex-host' : 'tpblock');
+  if (lexOnly){
+    const V0 = (u.vocab01 && u.vocab01.length) ? u.vocab01 : (u.vocab || []);
+    if (!V0.length && !(u.markers && u.markers.length)) return null;
+    const lex0 = el('div', 'tp-lex');
+    let inner0 =
+      '<div class="tp-lex-head"><span aria-hidden="true">🔤</span>' +
+      '<span>本条高阶词汇 / 语法</span>' +
+      '<span class="tp-lex-sub">均从本次输入文本中检出</span></div>';
+    if (V0.length){
+      inner0 += '<div class="tp-lex-row"><span class="tp-lex-k">词汇</span><span class="tp-lex-list">' +
+        V0.map(v => '<span class="fml-w ko">' + esc(v.ko) + '</span>' +
+          '<span class="tp-lex-cn">' + esc(v.cn) + '</span>').join('') + '</span></div>';
+    }
+    if (u.markers && u.markers.length){
+      inner0 += '<div class="tp-lex-row"><span class="tp-lex-k">语法</span><span class="tp-lex-list">' +
+        u.markers.map(m => '<span class="fml-w ko">' + esc(m) + '</span>' +
+          '<span class="tp-lex-cn">' + markerCn(m) + '</span>').join('') + '</span></div>';
+    }
+    lex0.innerHTML = inner0;
+    box.appendChild(lex0);
+    return box;
+  }
   /* ⭐ 用户令第十轮：01 改用**独立抽取链** u.picks01（全量 · 高阶 · 无条数上限）。
      u.picks（旧口径）继续喂 02 / 三问条 / 03，两条链互不影响。 */
   const P = (u.picks01 && u.picks01.length) ? u.picks01 : (u.picks || []);
@@ -5798,6 +5903,86 @@ function renderPasteDims(u){
   return wrap;
 }
 
+/* ------------------------------------------------------------------
+   商业新闻提取 · AI 纯净重构（固定三问结构）
+   —— 规范（用户令 2026-10-11）：例句 / 对策 / 原因分析一律由 AI 重构为
+      TOPIK 54 书面体（名词化 + 해라체），**绝不逐字复制报道原文长句**。
+   —— 两张卡都必须「有字段才渲染」：老卡没有 threeQ / mainIdea / vocab.ex →
+      对应的块根本不出现（不是渲染成空）。cardComplete 一律不引用新字段，
+      否则 14 张历史卡会被集体剔除、首页直接空白。
+   ------------------------------------------------------------------ */
+function renderBizPanel(card){
+  if (!card) return null;
+  const q3 = Array.isArray(card.threeQ) ? card.threeQ : [];
+  const idea = card.mainIdea;
+  if (!q3.length && !(idea && (idea.ko || idea.cn))) return null;
+
+  const wrap = el('div', 'bizpanel');
+  const head = el('div', 'bizpanel-top');
+  head.innerHTML =
+    '<span class="bizpanel-t">🎯 商业新闻提取 · AI 纯净重构</span>' +
+    '<span class="pill pill-navy">固定三问结构</span>' +
+    '<span class="pill pill-grey">AI 重构 · 해라체 书面体</span>' +
+    '<span class="pill pill-grey">零原文长句复制</span>';
+  wrap.appendChild(head);
+
+  if (idea && (idea.ko || idea.cn)){
+    const mi = el('div', 'mainidea');
+    mi.innerHTML =
+      '<span class="mainidea-lab">新闻主旨</span>' +
+      (idea.ko ? '<p class="mainidea-ko ko">' + esc(idea.ko) + '</p>' : '') +
+      (idea.cn ? '<p class="mainidea-cn">' + esc(idea.cn) + '</p>' : '');
+    wrap.appendChild(mi);
+  }
+
+  if (q3.length){
+    const box3 = el('div', 'q3');
+    const CIRCLED = '①②③④⑤';
+    q3.forEach((q, qi) => {
+      const pts = Array.isArray(q.points) ? q.points : [];
+      const blk = el('div', 'q3-block q3-' + (qi + 1));
+      let h = '<div class="q3-head">' +
+        '<span class="q3-q">' + esc(q.q || CIRCLED[qi] || '') + '</span>' +
+        '<span class="q3-tag">' + esc(q.tag || '') + '</span>' +
+        (q.tagKo ? '<span class="q3-tagko ko">' + esc(q.tagKo) + '</span>' : '') +
+        '<span class="q3-n">' + pts.length + ' 条论述</span></div>';
+      if (q.ko) h += '<p class="q3-lead ko">' + esc(q.ko) + '</p>';
+      if (q.cn) h += '<p class="q3-lead-cn">' + esc(q.cn) + '</p>';
+      if (pts.length){
+        h += '<div class="q3-points">' + pts.map((p, pi) =>
+          '<div class="q3-point">' +
+            '<span class="q3-pno">' + (CIRCLED[pi] || ('·' + (pi + 1))) + '</span>' +
+            '<span class="q3-ko ko">' + esc(p.ko || '') + '</span>' +
+            (p.cn ? '<p class="q3-cn">' + esc(p.cn) + '</p>' : '') +
+          '</div>').join('') + '</div>';
+      }
+      blk.innerHTML = h;
+      box3.appendChild(blk);
+    });
+    wrap.appendChild(box3);
+  }
+  return wrap;
+}
+
+/* 高阶词汇 · AI 重构示范句（可选：只有 vocab[].ex 存在才渲染） */
+function renderVocabDemo(card){
+  const vs = (card && Array.isArray(card.vocab) ? card.vocab : []).filter(v => v && v.ex);
+  if (!vs.length) return null;
+  const wrap = el('div', 'vdex');
+  wrap.innerHTML =
+    '<div class="vdex-head"><span aria-hidden="true">📘</span>' +
+    '<span>高阶词汇 · AI 重构示范句</span>' +
+    '<span class="vdex-sub">每条词汇配一句 AI 重构的 54 题书面体用例</span></div>' +
+    vs.map(v =>
+      '<div class="vdex-row">' +
+        '<div class="vdex-w"><span class="ko">' + esc(v.ko) + '</span>' +
+        (v.cn ? '<span class="vdex-cn">' + esc(v.cn) + '</span>' : '') + '</div>' +
+        '<p class="vdex-ko ko">' + esc(v.ex) + '</p>' +
+        (v.exCn ? '<p class="vdex-cn2">' + esc(v.exCn) + '</p>' : '') +
+      '</div>').join('');
+  return wrap;
+}
+
 function renderResult(card, news, text){
   const host = $('#decompose-area');
   host.innerHTML = '';
@@ -5901,6 +6086,16 @@ function renderResult(card, news, text){
     box.appendChild(iss);
   }
 
+  /* ⭐ 用户令（2026-10-13 第七轮）：**先只在 c6 出「高分句」样本（不要全部都改）**。
+     样本口径 = ①下架「54 题固定三问条 + 🎯 商业新闻提取 · AI 纯净重构」整个区域
+     （用户指认的「现状原因 / 解决措施」那部分）；
+     ②01 顶部新增「📝 高分句」——句子为主体，句下标注本句用到的语法点 / 单词，
+     内容零编造（合并本卡 grammar[].ko 例句 + vocab[].ex 示范句，同句不再重复出现）。
+     其余卡 / 粘贴路径一律原样，零影响。 */
+  /* ⚠️ 此处不能引用 hasCard —— 它在下方才 const 声明（TDZ），直接用 card 判即可 */
+  const isSample = !!(card && card.id === 'c6');
+
+  if (!isSample){
   /* 54 题固定三问条
      依据《TOPIK 高级大作文 考题关键词分析》：第 1 问 이유/원인 · 第 2 问 문제점/영향 · 第 3 问 노력/해결 방안
      ⭐ 用户令：三问必须与下方「本条文本考点句」实际提取结果**联动** ——
@@ -5929,6 +6124,13 @@ function renderResult(card, news, text){
     (qHit.indexOf(false) >= 0
       ? '<span class="triq-hint">置灰 = 本条未含该维度句子（非漏生成）</span>' : '');
   box.appendChild(triq);
+
+  /* —— 商业新闻提取 · AI 纯净重构（固定三问结构）——
+     紧贴 54 题固定三问条下方：上面那条给「这一问有没有」，这一块给「这一问的 AI 论述」。
+     可选字段 —— 老卡（无 threeQ / mainIdea）不渲染，零影响。 */
+  const bizPanel = renderBizPanel(card);
+  if (bizPanel) box.appendChild(bizPanel);
+  } /* ↑ end if (!isSample)：c6 样本口径不下架三问区，其余卡原样保留 */
 
   const grid = el('div', 'result-grid');
   grid.style.marginTop = '8px';
@@ -6019,69 +6221,82 @@ function renderResult(card, news, text){
   }
 
   /* ------------------------------------------------------------------
-     01 高阶考点句提炼
+     01 高阶语法与词汇
+     ⭐ 用户令（2026-10-11 第六轮）：01 **只保留两样** ——
+        ① 高阶语法（拆解 + AI 例句）② 词汇（含 AI 重构示范句）
+        （③ 固定三问结构的重构在 01 上方的独立区块，不在此列）。
+        下架：本条文本考点句提炼、句式模板·万能句架+替换词、母题语料库句式模板、
+        公式化拆解、考点高亮图例 —— **母题卡模式与粘贴模式同一口径**
+        （用户追加：搜索框里粘贴原文时也要跟着变）。
+        无母题卡时（粘贴 / 预置未匹配），01 由「本条高阶词汇 / 语法」栏顶上。
      ------------------------------------------------------------------ */
   const b1 = el('div', 'block');
-  b1.innerHTML = '<div class="block-head"><h4>01 高阶考点句提炼</h4>' + issueTag(news) + '<span class="pill pill-navy">PART 1</span></div>';
+  b1.innerHTML = '<div class="block-head"><h4>01 高阶语法与词汇</h4>' +
+    issueTag(news) + '<span class="pill pill-navy">PART 1</span></div>';
 
-  /* ⭐ 本条文本考点句（动态）：从本次输入文本提取 PART 1…N。
-     这是用户点名「输入什么、拆解什么」的落点 ——
-     贴在 01 最前面，先给「你的文本自己的考点句」，再给母题语料库的句式模板。 */
-  b1.appendChild(renderTextPoints(u, { mode: isPaste ? 'paste' : 'preset' }));
+  /* 无卡：01 = 本条文本检出的「高阶词汇 / 语法」栏（检不出就留空，不硬填） */
+  if (!hasCard){
+    const lex = renderTextPoints(u, { mode: isPaste ? 'paste' : 'preset', lexOnly: true });
+    if (lex) b1.appendChild(lex);
+  }
 
-  /* 分区隔断（用户令）：以上＝原文提炼，以下＝通用套用模板，一眼分清 */
-  const tpDiv = el('div', 'tp-divider');
-  tpDiv.innerHTML = '<span class="tp-divider-lab">以上为原文提炼 · 以下为通用套用模板</span>';
-  b1.appendChild(tpDiv);
-
-  /* 母题语料库句式模板（用户令第六轮）：
-     · 有卡 → 来源 Tag = 来源：动态匹配母题「卡名」（预置路径仍是「来源 · 母题卡」）
-     · 无卡 → **绝不硬套 CORPUS[0]**，整块置灰占位 + 指回「本条万能句架」 */
+  /* 母题语料库句式模板 / 公式化拆解（万能句架 + 替换词）/ 考点高亮图例 ——
+     ⭐ 用户令（2026-10-11 第六轮）已整块下架（母题卡模式与粘贴模式同一口径）。
+     01 只留下面两样：高阶语法（gl3）+ 词汇（wordlist / vdex）；
+     无卡路径（粘贴 / 预置未匹配）由上方「本条高阶词汇 / 语法」栏顶上。 */
   if (hasCard){
-    const libHead = el('div', 'lib-head');
-    libHead.innerHTML =
-      '<span class="lib-t">📚 母题语料库句式模板</span>' +
-      '<span class="pill pill-grey">' + (isPaste
-        ? '来源：动态匹配母题「' + esc(card.title) + '」'
-        : '来源 · 母题卡「' + esc(card.title) + '」') + '</span>' +
-      (isPaste && mtDomain ? '<span class="pill pill-navy">识别主题域 · ' + esc(mtDomain) + '</span>' : '') +
-      '<span class="pill pill-navy">系统推荐 · 54 题通用万能句架</span>' +
-      /* 分工标签（用户令第十二轮）：01 = 表达/句架 (How)，与 02 = 观点/思路 (What) 明确分开 */
-      '<span class="pill pill-navy">定位 · 高阶表达与句架 (How)</span>';
-    b1.appendChild(libHead);
-    b1.appendChild(el('p', 'lib-note',
-      '💡 本区提供 TOPIK 54 高阶写作句架公式。请将下方 02 提炼出的核心观点词，' +
-      '代入本区句架的 ①② 位置直接进行仿写。'));
 
-    const kv = el('div', 'kv');
-    kv.appendChild(el('div', 'kv-row',
-      '<span class="k">核心句</span><span class="v ko">' + markKo(card.ko, card) + '</span>'));
-    kv.appendChild(el('div', 'kv-row',
-      '<span class="k">译文</span><span class="v">' + markCn(card.cn, card) + '</span>'));
-    kv.appendChild(el('div', 'kv-row',
-      '<span class="k">语法</span><span class="v"><b class="ko">' + esc(card.grammar.pattern) + '</b> —— ' + esc(card.grammar.cn) + '</span>'));
-    b1.appendChild(kv);
-  /* 公式化拆解：把「核心句 → 万能句架 + 替换词 → 54 题成品句」摊开给考生看。
-     放在 核心句/译文/语法 之后、考点高亮图例之前 —— 先讲清怎么套，再讲词怎么标。 */
-  const fmlBox = formulaBlock(card);
-  if (fmlBox) b1.appendChild(fmlBox);
-  b1.appendChild(hlLegend(card));
-
-      /* 高阶语法三件套：只有带 grammar.list 的卡片才渲染，
-         每条语法点都必须能在本卡考点句中找到用例（其余卡片保持原来的单条语法行）。 */
+      /* 高阶语法条：只有带 grammar.list 的卡片才渲染。每条 = 语法点 + 结构拆解 +
+         AI 重构例句（+ 例句中文）。拆解行（g.how）与例句（g.ko）缺一即不渲染该行 ——
+         兼容旧卡（如 c2 只写 pattern/ko/cn，不写 how 也照常显示）。 */
   const g3 = (card.grammar && card.grammar.list) || [];
+
+  /* 📝 高分句（用户令 2026-10-13 第七轮 · 先只在 c6 试样本）——
+     「三问条 + AI 纯净重构」换成「单词、语法组成的高分句」：
+     句子为主体，每句下方标注本句用到的语法点 / 单词。
+     内容零编造：合并本卡 grammar[].ko 例句与 vocab[].ex 示范句；
+     样本卡同时不再在 gl3 里重复例句行、不再单独渲染 vdex（见下），避免同句出现两遍。 */
+  if (isSample){
+    const hjRows = [];
+    g3.forEach(g => { if (g.ko) hjRows.push({ tag: '语法', w: g.pattern, ko: g.ko, cn: g.cn }); });
+    (card.vocab || []).forEach(v => { if (v.ex) hjRows.push({ tag: '单词', w: v.ko, ko: v.ex, cn: v.exCn }); });
+    if (hjRows.length){
+      const hj = el('div', 'hj');
+      hj.innerHTML =
+        '<div class="hj-head"><span aria-hidden="true">📝</span>' +
+        '<span class="hj-t">高分句 · 单词 + 语法组成</span>' +
+        '<span class="hj-sub">句子为主体 · 句下标注本句用到的语法与单词</span></div>';
+      hjRows.forEach(r => {
+        const row = el('div', 'hj-row');
+        row.innerHTML =
+          '<p class="hj-ko ko">' + esc(r.ko) + '</p>' +
+          (r.cn ? '<p class="hj-cn">' + esc(r.cn) + '</p>' : '') +
+          '<div class="hj-tags"><span class="pill ' + (r.tag === '语法' ? 'pill-navy' : 'pill-grey') +
+            ' ko">' + r.tag + ' · ' + esc(r.w) + '</span></div>';
+        hj.appendChild(row);
+      });
+      b1.appendChild(hj);
+    }
+  }
+
   if (g3.length){
     const gl = el('div', 'gl3');
     gl.innerHTML =
       '<div class="gl3-head"><span aria-hidden="true">🧩</span>' +
-      '<span class="gl3-t">高阶语法三件套</span>' +
-      '<span class="gl3-sub">均可回溯到本卡考点句</span></div>';
+      '<span class="gl3-t">' + (isSample ? '高阶语法 · 结构拆解' : '高阶语法 · 拆解 + AI 例句') + '</span>' +
+      '<span class="gl3-sub">' + (isSample
+        ? '例句已上移「📝 高分句」· 此处只留结构与拆解'
+        : '结构拆解 + AI 重构例句 · 均可回溯本卡考点句') + '</span></div>';
     g3.forEach(g => {
       const row = el('div', 'gl3-row');
-      row.innerHTML =
-        '<div class="gl3-p">' + esc(g.pattern) + '</div>' +
+      /* 样本口径（c6）：例句已上移「📝 高分句」，此处只留 结构 + 拆解，避免同句出现两遍 */
+      const eg = isSample ? '' :
         (g.ko ? '<p class="gl3-eg ko">' + esc(g.ko) + '</p>' : '') +
         (g.cn ? '<p class="gl3-cn">' + esc(g.cn) + '</p>' : '');
+      row.innerHTML =
+        '<div class="gl3-p">' + esc(g.pattern) + '</div>' +
+        (g.how ? '<p class="gl3-how"><span class="gl3-how-t">拆解</span>' + esc(g.how) + '</p>' : '') +
+        eg;
       gl.appendChild(row);
     });
     b1.appendChild(gl);
@@ -6091,28 +6306,18 @@ function renderResult(card, news, text){
   card.vocab.forEach(v => wl.appendChild(el('span', 'pill pill-grey ko', esc(v.ko) + ' · ' + esc(v.cn))));
   card.markers.forEach(m => wl.appendChild(el('span', 'pill pill-navy ko', '语法 ' + esc(m) + ' · ' + esc(markerCn(m)))));
   b1.appendChild(wl);
-  } else {
-    /* 无匹配卡：置灰占位（用户令：严禁拿母题卡文本填补，宁可空、不可编）
-       用户令第九轮：来源措辞固定为「系统通用 54 题写作句架」；
-       若已识别出主题域（如金融/网络安全），一并说明「系统认得出题材，
-       只是母题库里没有对应卡」—— 比一句冷冰冰的「未命中」有用得多。 */
-    const libEmpty = el('div', 'lib-head');
-    libEmpty.innerHTML =
-      '<span class="lib-t">📚 母题语料库句式模板</span>' +
-      (mtDomain ? '<span class="pill pill-navy">识别主题域 · ' + esc(mtDomain) + '</span>' : '') +
-      '<span class="pill pill-grey">来源：系统通用 54 题写作句架</span>';
-    b1.appendChild(libEmpty);
-    const de = el('div', 'dim-empty');
-    de.innerHTML =
-      '<p class="dim-empty-t">⚪ 当前文本未匹配到相近母题卡，无法提取语料库句式模板</p>' +
-      '<p class="dim-empty-c">' +
-      (mtDomain ? '系统已识别本条主题域为「' + esc(mtDomain) + '」，' : '') +
-      '但系统母题库中没有与它高度相关的卡片，因此这里不做任何填补 —— ' +
-      '绝不拿无关议题的母题模板硬套你的文章。' +
-      '可直接使用上方「🧮 句式模板 · 万能句架 + 替换词」—— 那是从你粘贴的文本里实时提取并补齐的 54 题通用句架；' +
-      '也可以在文中补充 직장 / 환경 / 교육 等主题词后重新拆解，系统会自动匹配对应母题。</p>';
-    b1.appendChild(de);
+
+  /* 高阶词汇 · AI 重构示范句（可选：仅有 vocab[].ex 的卡才渲染）
+     样本口径（c6）：示范句已并入「📝 高分句」，不再单独渲染，避免同句出现两遍。 */
+  if (!isSample){
+    const vdex = renderVocabDemo(card);
+    if (vdex) b1.appendChild(vdex);
   }
+  }
+  /* ⚠️ 原 else 分支（「母题语料库句式模板」置灰占位 + 「未匹配到母题卡」说明）
+     已随三块下架一并移除 —— 用户令（第六轮）：无卡时 01 只用上方
+     「本条高阶词汇 / 语法」栏表达，不再摆一块模板占位。
+     mtDomain 仍在议题身份块（issue-meta）里使用，不受影响。 */
 
   grid.appendChild(b1);
 
@@ -6386,39 +6591,12 @@ function renderResult(card, news, text){
 
   box.appendChild(grid);
 
-  /* 万能金句迁移模板
-     —— 原先 card.formula 只出现在「一键复制」文本里，页面上完全看不到。
-        这本身就是交付的一部分（可迁移模板），所以补上渲染。
-        模板里的 ~ 是「空格位」，换成任意母题即可复用到别的题目。 */
-  /* 万能金句迁移模板（＝用户口中的「高阶替换词卡」）
-     用户令第十轮：① 标签统一为「💡 高阶替换词卡 · 可灵活套用任意母题」；
-                   ② 韩文模板里**就地**标出核心句架 / 可替换关键词 / ~ 填空位。
-     ⚠️ 旧文案是**写死的**（固定写「几处空格可换任意母题」）—— c1 的 formula 里
-        一个 ~ 都没有，却照样照印那个数字。现在空格数动态数出来，没有就不出图例。
-        该旧文案已列入 check.js 死令牌表，源码里不得回潮。 */
-  if (hasCard && card.formula && card.formula.ko){
-    const fm = el('div', 'formula');
-    const fKo = card.formula.ko;
-    const fHits = scanPatterns(fKo, true);
-    const fFrameN = fHits.filter(h => h.p && !h.generic).length;
-    const fSlotN = (card.vocab || []).filter(v => v && v.ko && fKo.indexOf(v.ko) >= 0).length;
-    const fBlankN = (fKo.match(/~/g) || []).length;
-    fm.innerHTML =
-      '<div class="head">' +
-        '<span class="pill pill-navy pill-dot">万能金句迁移模板</span>' +
-        '<span class="pill pill-grey" style="margin-left:auto;">💡 高阶替换词卡 · 可灵活套用任意母题</span>' +
-      '</div>' +
-      '<div class="ko">' + markExKo(fKo, exSegsOf(fHits, card.vocab || [])) + '</div>' +
-      /* 用户令：万能金句迁移模板必须配**中文翻译** —— 原文（韩文模板）下方给出整段直译，
-         不依赖机翻（本卡是预置语料，译文写进数据模型 formula.cnTr，离线也拿得到）。
-         与下方「套用公式」行分工：cnTr＝逐句直译（读懂它说什么），cn＝结构公式（学会怎么套）。 */
-      (card.formula.cnTr
-        ? '<div class="cn-tr"><span class="cn-tr-lab">中文翻译</span>' + esc(card.formula.cnTr) + '</div>'
-        : '') +
-      '<p class="cn"><span class="cn-lab">套用公式</span>' + esc(card.formula.cn) + '</p>';
-    fm.appendChild(exLegend(fFrameN, fSlotN, fBlankN));
-    box.appendChild(fm);
-  }
+  /* 万能金句迁移模板 ——⭐ 用户令（2026-10-11 第六轮）**一并下架**：
+     它的性质与刚下架的「句式模板 · 万能句架 + 替换词」同类（都是句架 / 替换词模板），
+     而用户点名的保留项只有「高阶语法 / 词汇 / 固定三问重构」三样。
+     ⚠️ 数据层的 card.formula 与「一键复制」文本**原样保留**（复制出去仍是全量语料资产），
+        这里只撤掉页面上的展示块；若要恢复展示，从 git 历史取回该渲染段即可。
+     见 _qa/qa-01-slim-2026-10-11.md 的「下架清单」第 6 项。 */
 
   /* 底栏：复制整段。预置路径 = 母题卡全量语料；粘贴路径 = 本条动态拆解结果。
      （attrText / g3Text 都是母题卡字段，无卡时绝不取 —— 用户令：不硬套模板） */
