@@ -7,7 +7,7 @@
 <!-- 构建标识：单文件站点没有外部 JS/CSS 可加 ?v=，靠这个标记辨别浏览器拿到的是哪一版。
      查看方法：DevTools 控制台输入 __BUILD__ ，或右键「查看网页源代码」搜 lyntopik-build。
      ⚠️ 每次改代码必须同步更新此处的号 + 下面 window.__BUILD__，否则无法分辨新旧。 -->
-<meta name="lyntopik-build" content="20261014-2200">
+<meta name="lyntopik-build" content="20261026-0200">
 <!-- 防强缓存声明（对 file:// 及部分老浏览器有效；HTTP 环境真正生效的是页脚的自愈脚本） -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -1952,7 +1952,7 @@ p.dim-empty-c{margin:6px 0 0; font-size:11.6px; line-height:1.72; color:var(--in
 /* 构建标识（与 <meta name="lyntopik-build"> 保持一致）。
    单文件站点没有外部资源可加 ?v=，部署后靠它辨别浏览器实际加载的是哪一版：
    控制台输入 __BUILD__ 即可看到；对不上就是缓存/走错 URL。 */
-window.__BUILD__ = '20261014-2200';
+window.__BUILD__ = '20261026-0200';
 console.log('[LYNTOPIK] build ' + window.__BUILD__);
 
 /* —— HTML 强缓存自愈 ——
